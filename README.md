@@ -1,43 +1,62 @@
 # BlackHoleEdu
 
-실시간 일반상대성이론 기반 블랙홀 교육 시뮬레이션 (Unity 6, URP).
-A real-time, general-relativity-based black hole educational demo built with Unity 6 + URP.
+A real-time, general-relativity-based black hole educational simulation built with **Unity 6 + URP**.
 
-화면의 기하(그림자·광자 고리·렌즈 상)는 셰이더에서 **매 픽셀 측지선 방정식을 수치적분**한 결과이며,
-밝기와 색은 상대론적 편이(도플러 비밍 · 중력 적색편이 · 흑체복사)로 계산됩니다.
+*[한국어 README](README.ko.md)*
 
-## 주요 기능
+Everything you see in the image — the shadow, the photon ring, the lensed arcs — comes from
+**numerically integrating the geodesic equation per pixel** in a fragment shader. Brightness and
+color come from relativistic shifts: Doppler beaming, gravitational redshift, and blackbody radiation.
 
-- **슈바르츠실트 레이마칭** — 널 측지선 leapfrog 적분, 얇은 강착원반 + 대기 헤이즈, I ∝ (δ·g)³ 상대론적 비밍, T ∝ r^(−3/4) 박원반 온도
-- **커(회전) 블랙홀** — 커–실트 좌표 해밀토니안 적분, D자 그림자, 프레임 드래깅, ISCO(a) 자동 추적 (F4)
-- **이중 블랙홀 병합** — GW150914 시네마틱: 두 렌징 중심의 나선 강하, 궤도 동기 처프 오디오, 병합·링다운, 커 잔해 (F7)
-- **가이드 투어** — 11단계 나레이션 투어 (G), 탄생 인트로 (F5), 1인칭 낙하 (F6), 중력렌즈 돋보기 (F3)
-- **교육 장치** — 광자 궤적 발사 (Space), 스파게티화 (T), 아인슈타인 링 (E), 시간 지연 시계(카메라 위치 연동), 광도 곡선 (V), EHT 관측사진 비교 (O)
-- **이론 배경 패널** — 화면 상황에 맞는 지배 방정식 카드 (X, F2 고등 난이도에서 자동 표시)
-- **한/영 전환** — UI·자막·나레이션(edge-tts 뉴럴 보이스) 전체 이중 언어 (K)
-- **프로시저럴 에셋** — 별밭/은하수 스카이박스, 별 표면(대류·코로나), 앰비언트 사운드스케이프 전부 코드 생성 (외부 에셋 0)
-- **MR 씬** — Quest 패스스루용 BlackHoleMR (물질 던지기, 쌍성 병합 햅틱, 손바닥 미니 블랙홀)
+## Features
 
-## 조작 (BlackHoleShowcase 씬)
+- **Schwarzschild raymarching** — null geodesics integrated with a leapfrog scheme on a single
+  billboard quad; thin accretion disk + volumetric haze, relativistic beaming *I ∝ (δ·g)³*,
+  Shakura–Sunyaev thin-disk temperature *T ∝ r^(−3/4)*, Planckian-locus blackbody colors
+- **Kerr (spinning) black hole** — Kerr–Schild coordinate Hamiltonian integration: D-shaped shadow,
+  frame dragging, disk inner edge tracking the prograde ISCO(a) (F4 spin presets 0 → 0.998)
+- **Binary black hole merger** — the GW150914 story (F7): two lensing centers inspiraling on a
+  Peters-equation orbit, gravitational-wave chirp audio synced to the actual orbital frequency,
+  merger flash, ringdown, and a Kerr remnant with 95% of the total mass and spin a ≈ 0.69
+- **Guided tour** — 11 narrated steps (G), star-collapse intro (F5), first-person fall-in (F6),
+  gravitational-lens magnifier (F3)
+- **Educational tools** — photon trajectory launcher (Space), spaghettification (T), Einstein ring
+  (E), time-dilation clocks linked to the actual camera distance, light curve (V), EHT photo
+  comparison (O)
+- **Theory panel** — context-sensitive governing-equation cards (X; auto-shown at the advanced
+  difficulty level, F2)
+- **Korean / English toggle** — every caption, panel and narration clip is bilingual (K), with
+  neural-TTS voice-over in both languages
+- **Fully procedural assets** — starfield/Milky-Way skybox, star surface shader (convection
+  granulation + corona), ambient soundscape and GW chirp are all generated in code; zero external
+  art or audio assets
+- **MR scene** — Quest passthrough (`BlackHoleMR`): room-scale hole you can grab and scale,
+  throwable spectral-type star-balls, binary-merger haptics, palm-summoned mini black hole
 
-| 키 | 기능 | 키 | 기능 |
+## Controls (BlackHoleShowcase scene)
+
+| Key | Action | Key | Action |
 |---|---|---|---|
-| 우클릭 드래그 / 휠 | 카메라 | G · N · B | 가이드 투어 |
-| 1·2·3 | 원반 색 프리셋 | 4·5·6 | 질량 프리셋 |
-| Space / C | 광자 발사 / 지우기 | E (A/D) | 아인슈타인 링 |
-| T / J | 스파게티화 / 제트 | V / O | 광도곡선 / 관측 비교 |
-| X / F2 | 수식 패널 / 난이도 | K | 한국어/English |
-| F3 / F4 | 렌즈 돋보기 / 스핀 | F5 / F6 / F7 | 인트로 / 낙하 / 병합 |
-| L / I / U / M / H | 라벨 / 패널 / 몰입 / 소리 / 도움말 | R | 카메라 리셋 |
+| RMB drag / wheel | Orbit / zoom camera | G · N · B | Guided tour |
+| 1·2·3 | Disk color presets | 4·5·6 | Mass presets |
+| Space / C | Fire photons / clear | E (A/D) | Einstein ring |
+| T / J | Spaghettification / jets | V / O | Light curve / EHT compare |
+| X / F2 | Theory panel / difficulty | K | Korean / English |
+| F3 / F4 | Lens magnifier / spin | F5 / F6 / F7 | Intro / fall-in / merger |
+| L / I / U / M / H | Labels / panel / immersive / sound / help | R | Reset camera |
 
-## 물리적 정직성
+## Physical honesty
 
-렌징·그림자·시간지연·비밍은 실제 방정식의 수치해입니다. 원반의 난류 질감, 초신성·제트 연출,
-이중 병합의 근접 렌징(중첩 근사)은 물리적 동기를 가진 시각화입니다 — 인앱 이론 카드(X)에 각각 명시되어 있습니다.
+The lensing geometry, shadow size, time-dilation numbers and Doppler asymmetry are numerical
+solutions of the real equations. The disk's turbulence texture, the supernova/jet effects, and the
+close-range lensing of the binary merger (a superposed-deflection approximation — no analytic
+two-body metric exists) are physically motivated visualizations. Each in-app theory card (X) states
+which is which.
 
-## 요구 사항
+## Requirements
 
-- Unity 6 (URP 17), XR 패키지는 MR 씬에만 필요
-- 나레이션 오디오는 `Assets/BlackHoleEffect/Resources/Narration/`에 포함 (재생성: edge-tts, 대본은 각 스크립트의 `Lines` 배열)
+- Unity 6 (URP 17); the XR packages are only needed for the MR scene
+- Narration audio ships in `Assets/BlackHoleEffect/Resources/Narration/` (regenerate with
+  [edge-tts](https://github.com/rany2/edge-tts); transcripts live in each script's `Lines` arrays)
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
