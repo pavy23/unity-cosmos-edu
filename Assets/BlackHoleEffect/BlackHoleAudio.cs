@@ -54,23 +54,17 @@ namespace BlackHoleEffect
 
         void Awake()
         {
-#if UNITY_WEBGL && !UNITY_EDITOR
-            // Unity WebGL cannot stream procedural AudioClips (no OnAudioRead
-            // callbacks) — the soundscape is silent on the web build.
-            source = GetComponent<AudioSource>();
-#else
             source = GetComponent<AudioSource>();
             var clip = AudioClip.Create("CosmicSoundscape", SampleRate, 2, SampleRate, true, OnRead);
             source.clip = clip;
             source.loop = true;
             source.spatialBlend = 0f;
             source.playOnAwake = false;
-#endif
         }
 
         void Start()
         {
-            if (Application.isPlaying && source.clip != null) source.Play();
+            if (Application.isPlaying) source.Play();
         }
 
         void Update()

@@ -71,9 +71,7 @@ Shader "BlackHole/RaymarchedBlackHole"
             HLSLPROGRAM
             #pragma vertex vert
             #pragma fragment frag
-            // 3.5 keeps WebGL2 (GLES3) in range — the shader only needs
-            // dynamic loops, no 4.5-class features.
-            #pragma target 3.5
+            #pragma target 4.5
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "StarFunctions.hlsl"
 

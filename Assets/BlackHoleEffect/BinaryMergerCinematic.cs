@@ -98,7 +98,7 @@ namespace BlackHoleEffect
             mat.SetFloat(BinaryOnId, 1f);
 
             EnsureChirp();
-            if (chirpSource != null) chirpSource.Play();
+            chirpSource.Play();
 
             // --- Phase 1: slow inspiral while the story is told -----------
             Caption(0);
@@ -207,7 +207,7 @@ namespace BlackHoleEffect
             }
 
             // --- restore exploration state ---------------------------------
-            if (chirpSource != null) chirpSource.Stop();
+            chirpSource.Stop();
             ringdown = false;
             for (float t = 0f; t < 1.2f; t += Time.deltaTime)
             {
@@ -247,18 +247,12 @@ namespace BlackHoleEffect
         // ---------------- chirp / ringdown synthesizer ----------------
         void EnsureChirp()
         {
-#if UNITY_WEBGL && !UNITY_EDITOR
-            // Streaming procedural clips are unsupported on WebGL — the
-            // merger runs without the chirp there (narration still plays).
-            return;
-#else
             if (chirpSource != null) return;
             chirpSource = gameObject.AddComponent<AudioSource>();
             chirpSource.clip = AudioClip.Create("GWChirp", SampleRate, 1, SampleRate, true, OnChirpRead);
             chirpSource.loop = true;
             chirpSource.spatialBlend = 0f;
             chirpSource.volume = 0.8f;
-#endif
         }
 
         void OnChirpRead(float[] data)
