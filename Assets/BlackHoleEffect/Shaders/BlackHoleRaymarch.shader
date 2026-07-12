@@ -204,6 +204,12 @@ Shader "BlackHole/RaymarchedBlackHole"
                 float streak = lerp(1.0 - _DiskContrast, 1.0 + 1.6 * _DiskContrast, n);
                 density *= streak;
 
+                // Sparse bright clumps riding the Keplerian flow. The smooth
+                // fbm streaks alone read as almost static — these give the
+                // eye discrete features to track, so the rotation is visible.
+                float knot = bh_vnoise3(float3(cos(theta) * 3.1, sin(theta) * 3.1, log2(rSim) * 2.3));
+                density *= 1.0 + 2.4 * _DiskContrast * pow(saturate(knot), 6.0);
+
                 float shift = relShift(hp, rSim, velN);
                 float boost = min(shift * shift * shift, 5.0);
                 float3 c = blackbodyRGB(diskTemperatureK(r) * shift);

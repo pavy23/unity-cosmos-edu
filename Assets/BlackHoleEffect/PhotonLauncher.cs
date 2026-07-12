@@ -46,10 +46,6 @@ namespace BlackHoleEffect
         readonly List<Trail> trails = new List<Trail>();
         Material escapeMat, captureMat, headMat;
         Texture2D headTex;
-        RectTransform hintPanel;
-        UnityEngine.UI.Text hintText;
-        Coroutine hintRoutine;
-        bool hintShownOnce;
 
         [ContextMenu("Fire One")]
         public void FireOne() => Fire(impactParameter);
@@ -60,7 +56,17 @@ namespace BlackHoleEffect
             ClearTrails();
             for (int i = 0; i < sweepCount; i++)
                 Fire(Mathf.Lerp(1.4f, 4.6f, i / (float)(sweepCount - 1)));
-            ShowPlaneHint();
+
+            // Tell the user WHAT this shows (suppressed during the tour,
+            // which narrates the same thing itself).
+            if (Application.isPlaying)
+                ExplainCard.Show(
+                    Loc.T("빛의 휘어짐 — 광자 궤적", "Bending of Light — Photon Paths",
+                          "光の湾曲 — 光子の軌跡", "光线弯曲 — 光子轨迹"),
+                    Loc.T("광자들이 블랙홀 곁을 지나며 궤적이 휩니다. 가까이 지날수록 더 크게 휘고, 임계거리(약 2.6 Rs)보다 안쪽을 지나는 광자는 붉게 표시되며 탈출하지 못하고 포획됩니다.",
+                          "Photons curve as they pass the black hole — the closer, the sharper the bend. Photons passing inside the critical distance (about 2.6 Rs) turn red and are captured.",
+                          "光子はブラックホールのそばを通ると軌跡が曲がります。近いほど大きく曲がり、臨界距離（約2.6 Rs）より内側を通る光子は赤く表示され、脱出できずに捕獲されます。",
+                          "光子经过黑洞时轨迹被弯曲——离得越近，弯得越厉害。经过临界距离（约2.6 Rs）以内的光子显示为红色，无法逃脱而被捕获。"));
         }
 
         public void ToggleSweep()
@@ -269,43 +275,5 @@ namespace BlackHoleEffect
             return headTex;
         }
 
-        /// <summary>One-time caption explaining why the trajectory plane
-        /// follows the camera (planar geodesics look edge-on from the side).</summary>
-        void ShowPlaneHint()
-        {
-            if (!Application.isPlaying || hintShownOnce) return;
-            hintShownOnce = true;
-
-            if (hintPanel == null)
-            {
-                var canvas = BlackHoleUI.EnsureCanvas(Camera.main);
-                hintPanel = BlackHoleUI.MakePanel(canvas.transform, "Photon Plane Hint",
-                    new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-24f, -60f), new Vector2(470f, 118f));
-                hintText = BlackHoleUI.MakeText(hintPanel, "Text", 16, BlackHoleUI.TextPrimary, TextAnchor.MiddleLeft,
-                    new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(430f, 104f));
-                hintText.horizontalOverflow = HorizontalWrapMode.Wrap;
-            }
-            hintText.text = Loc.T(
-                "<color=#FFC46E>왜 옆에서는 궤적이 안 보였을까?</color>\n" +
-                "빛의 궤도는 언제나 블랙홀 중심을 지나는 <b>평면</b> 안에 있습니다.\n" +
-                "옆에서 보면 종이처럼 얇아 보이지 않으므로, 이제 궤적 평면이\n항상 화면을 향해 돌아갑니다.",
-                "<color=#FFC46E>Why did the trails vanish from the side?</color>\n" +
-                "A light ray's orbit always lies in a <b>plane</b> through the hole's\ncenter. Edge-on that plane is paper-thin, so the trajectory\nplane now rotates to face your view.",
-                "<color=#FFC46E>なぜ横からは軌跡が見えなかったのか？</color>\n" +
-                "光の軌道はつねに、中心を通る<b>平面</b>の中にあります。\n" +
-                "横から見ると紙のように薄くて見えないため、軌跡の平面は\nいつも画面のほうを向くようになっています。",
-                "<color=#FFC46E>为什么从侧面看不到轨迹？</color>\n" +
-                "光的轨道永远位于一个通过黑洞中心的<b>平面</b>内。\n" +
-                "侧视时该平面薄如纸而不可见，因此轨迹平面\n现在会始终朝向你的视角旋转。");
-            hintPanel.gameObject.SetActive(true);
-            if (hintRoutine != null) StopCoroutine(hintRoutine);
-            hintRoutine = StartCoroutine(HideHint());
-        }
-
-        IEnumerator HideHint()
-        {
-            yield return new WaitForSeconds(9f);
-            if (hintPanel != null) hintPanel.gameObject.SetActive(false);
-        }
     }
 }

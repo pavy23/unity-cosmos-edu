@@ -37,10 +37,10 @@ Material:
     - _DiskOuter: 8.6
     - _DiskTemp: 1.06
     - _Doppler: 0.72
-    - _FlowSpeed: 0.9
+    - _FlowSpeed: 1.6
     - _HazeStrength: 0.18
-    - _Hole1Mass: 1
-    - _Hole2Mass: 0.8
+    - _Hole1Mass: 0.6
+    - _Hole2Mass: 0.48000002
     - _MRMode: 0
     - _NebulaIntensity: 0.15
     - _Spin: 0
@@ -49,9 +49,9 @@ Material:
     - _ViewExtent: 15
     - _ZWrite: 1
     m_Colors:
-    - _DemoStarDir: {r: 0.3082009, g: -0.13844791, b: 0.9411931, a: 0}
+    - _DemoStarDir: {r: 0.74682873, g: -0.058213323, b: 0.66246367, a: 0}
     - _DiskTint: {r: 1, g: 1, b: 1, a: 1}
-    - _Hole1Pos: {r: 0.25056687, g: -0, b: -3.119115, a: 0}
-    - _Hole2Pos: {r: -0.31320858, g: 0, b: 3.8988938, a: 0}
+    - _Hole1Pos: {r: -1.5579655, g: -0, b: -1.0091436, a: 0}
+    - _Hole2Pos: {r: 1.9474568, g: 0, b: 1.2614294, a: 0}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

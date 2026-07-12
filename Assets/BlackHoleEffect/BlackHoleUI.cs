@@ -53,7 +53,12 @@ namespace BlackHoleEffect
             canvas = go.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceCamera;
             canvas.worldCamera = cam != null ? cam : Camera.main;
-            canvas.planeDistance = 1f;
+            // Just past the near plane: screen-space-camera UI is depth-tested
+            // against opaque geometry, and during the fall-in the camera gets
+            // closer than 1 unit to the raymarch quad — at planeDistance 1 the
+            // quad would occlude every caption right when they matter most.
+            var refCam = canvas.worldCamera;
+            canvas.planeDistance = refCam != null ? Mathf.Max(refCam.nearClipPlane * 1.5f, 0.15f) : 0.15f;
             canvas.sortingOrder = 100;
             var scaler = go.AddComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;

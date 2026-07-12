@@ -228,7 +228,7 @@ MonoBehaviour:
   suspendCamera: 0
   orbitSensitivity: 0.25
   zoomFactor: 0.86
-  pitchLimits: {x: -2, y: 70}
+  pitchLimits: {x: -70, y: 70}
   distanceLimits: {x: 3.2, y: 40}
 --- !u!114 &615141705
 MonoBehaviour:
@@ -275,6 +275,7 @@ MonoBehaviour:
   holeRenderer: {fileID: 1106319891}
   controller: {fileID: 1106319890}
   controls: {fileID: 615141704}
+  autoPlayOnStart: 1
 --- !u!114 &615141708
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -743,11 +744,12 @@ MonoBehaviour:
   diskOuterRadius: 8.6
   diskBrightness: 9.5
   diskTemperature: 1.06
-  flowSpeed: 0.9
+  flowSpeed: 1.6
   dopplerBeaming: 0.72
   turbulenceDetail: 4.2
   turbulenceContrast: 0.3
   diskTint: {r: 1, g: 1, b: 1, a: 1}
+  spin: 0
   starDensity: 0.12
   nebulaHaze: 0.15
   raymarchSteps: 220
@@ -840,7 +842,11 @@ MonoBehaviour:
   show: 1
   massSolarMasses: 4300000
   massLabel: "\uAD81\uC218\uC790\uB9AC A* (\uC6B0\uB9AC\uC740\uD558 \uC911\uC2EC)"
+  massLabelEn: Sagittarius A* (Milky Way center)
+  massLabelJa: "\u3044\u3066\u5EA7A*\uFF08\u5929\u306E\u5DDD\u9280\u6CB3\u306E\u4E2D\u5FC3\uFF09"
+  massLabelZh: "\u4EBA\u9A6C\u5EA7A*\uFF08\u94F6\u6CB3\u7CFB\u4E2D\u5FC3\uFF09"
   probeDistanceRs: 1.5
+  observerFollowsCamera: 1
   controller: {fileID: 1106319890}
   showDilationRow: 1
 --- !u!4 &1283204372

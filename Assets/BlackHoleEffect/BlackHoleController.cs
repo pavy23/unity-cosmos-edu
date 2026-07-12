@@ -36,7 +36,7 @@ namespace BlackHoleEffect
         [Range(4f, 14f)] public float diskOuterRadius = 8.6f;
         [Range(0f, 40f)] public float diskBrightness = 9.5f;
         [Range(0.5f, 1.8f)] public float diskTemperature = 1.06f;
-        [Range(0f, 3f)] public float flowSpeed = 0.9f;
+        [Range(0f, 3f)] public float flowSpeed = 1.6f;
         [Range(0f, 1f)] public float dopplerBeaming = 0.72f;
         [Range(1f, 14f)] public float turbulenceDetail = 4.2f;
         [Range(0f, 1f)] public float turbulenceContrast = 0.3f;

@@ -247,7 +247,9 @@ namespace BlackHoleEffect
         /// hotter, faster disks (T ∝ M^-1/4, orbital period ∝ M).</summary>
         public void SetMassPreset(MassPreset preset)
         {
-            float scale = 0.5f, temp = 1.06f, flow = 0.9f;
+            // Flow speeds are stylized upward: real SMBH disks take minutes
+            // to hours per orbit, which on screen reads as a still image.
+            float scale = 0.5f, temp = 1.06f, flow = 1.6f;
             switch (preset)
             {
                 case MassPreset.Stellar10:
@@ -255,19 +257,19 @@ namespace BlackHoleEffect
                     massLabelEn = "Stellar-mass black hole (supernova remnant)";
                     massLabelJa = "恒星質量ブラックホール（超新星の残骸）";
                     massLabelZh = "恒星级黑洞（超新星遗迹）";
-                    scale = 0.28f; temp = 1.5f; flow = 2.2f; break;
+                    scale = 0.28f; temp = 1.5f; flow = 2.6f; break;
                 case MassPreset.SagittariusA:
                     massSolarMasses = 4.3e6; massLabel = "궁수자리 A* (우리은하 중심)";
                     massLabelEn = "Sagittarius A* (Milky Way center)";
                     massLabelJa = "いて座A*（天の川銀河の中心）";
                     massLabelZh = "人马座A*（银河系中心）";
-                    scale = 0.5f; temp = 1.06f; flow = 0.9f; break;
+                    scale = 0.5f; temp = 1.06f; flow = 1.6f; break;
                 case MassPreset.M87:
                     massSolarMasses = 6.5e9; massLabel = "M87* (EHT 최초 관측 대상)";
                     massLabelEn = "M87* (first EHT image target)";
                     massLabelJa = "M87*（EHT初撮影の対象）";
                     massLabelZh = "M87*（EHT首张照片的目标）";
-                    scale = 0.78f; temp = 0.86f; flow = 0.5f; break;
+                    scale = 0.78f; temp = 0.86f; flow = 1.0f; break;
             }
             if (controller != null)
             {

@@ -119,8 +119,8 @@ namespace BlackHoleEffect
             new Step { focus = 3,
                 title = "4. 도플러 비밍", titleEn = "4. Doppler Beaming",
                 titleJa = "4. ドップラービーミング", titleZh = "4. 多普勒聚束",
-                hint = "숫자 1~3으로 원반 색도 바꿔보세요", hintEn = "Try disk colors with 1–3",
-                hintJa = "数字1〜3で円盤の色も変えられます", hintZh = "按数字1~3可切换吸积盘颜色" },
+                hint = "1 키로 원반 색을 바꿔보세요", hintEn = "Press 1 to change disk colors",
+                hintJa = "1キーで円盤の色を変えられます", hintZh = "按1键可切换吸积盘颜色" },
             new Step { focus = -1,
                 title = "5. 중력 시간 지연", titleEn = "5. Gravitational Time Dilation",
                 titleJa = "5. 重力による時間の遅れ", titleZh = "5. 引力时间膨胀",
@@ -223,6 +223,8 @@ namespace BlackHoleEffect
             if (einsteinDemo != null) einsteinDemo.active = false;
             if (spaghetti != null) spaghetti.active = false;
             if (jets != null) jets.active = false;
+            // Photon trails linger otherwise — each step starts on a clean stage.
+            if (launcher != null) launcher.ClearTrails();
         }
 
         void EnsureNarration()

@@ -33,7 +33,7 @@ namespace BlackHoleEffect
         // Narration transcripts (captions) — TTS clips generated from these.
         public static readonly string[] Lines =
         {
-            "두 개의 블랙홀이 서로의 둘레를 돌고 있습니다. 중력파로 에너지를 잃으며, 나선을 그리며 서서히 가까워집니다.",
+            "만약 두 개의 블랙홀이 서로 가까이 있다면 어떤 일이 벌어질까요? 두 블랙홀은 서로의 둘레를 돌며, 중력파로 에너지를 잃고, 나선을 그리며 서서히 가까워집니다.",
             "가까워질수록 공전은 빨라지고, 시공간의 잔물결인 중력파는 점점 높은 음으로 울립니다. 이것이 라이고가 들은 '처프'입니다.",
             "병합! 두 지평선이 하나가 되고, 태양 세 개 분량의 질량이 순수한 중력파 에너지로 우주에 방출됩니다.",
             "남은 것은 더 크고, 빠르게 회전하는 하나의 블랙홀입니다. 2015년 9월 14일, 인류는 이 소리를 처음으로 들었습니다. 지 더블유 일오공구일사.",
@@ -41,7 +41,7 @@ namespace BlackHoleEffect
 
         public static readonly string[] LinesEn =
         {
-            "Two black holes are circling each other. Losing energy to gravitational waves, they spiral slowly closer.",
+            "What happens when two black holes live side by side? They circle each other, losing energy to gravitational waves, spiraling slowly closer.",
             "As they close in, the orbit speeds up, and the ripples in spacetime — gravitational waves — ring at an ever higher pitch. This is the chirp that LIGO heard.",
             "Merger! The two horizons become one, and three suns' worth of mass is radiated into space as pure gravitational-wave energy.",
             "What remains is a single black hole — larger, and spinning fast. On September 14th, 2015, humanity heard this sound for the first time: GW150914.",
@@ -49,7 +49,7 @@ namespace BlackHoleEffect
 
         public static readonly string[] LinesJa =
         {
-            "ふたつのブラックホールが互いの周りを回っています。重力波でエネルギーを失いながら、らせんを描いてゆっくりと近づいていきます。",
+            "もし、ふたつのブラックホールがすぐ近くにあったら、何が起こるのでしょうか。ふたつは互いの周りを回りながら、重力波でエネルギーを失い、らせんを描いてゆっくりと近づいていきます。",
             "近づくほど公転は速くなり、時空のさざ波である重力波は、どんどん高い音で鳴り響きます。これがLIGOが聴いた「チャープ」です。",
             "合体！ふたつの地平面がひとつになり、太陽3個分の質量が純粋な重力波のエネルギーとして宇宙に放たれます。",
             "残ったのは、より大きく、速く回転するひとつのブラックホール。2015年9月14日、人類はこの音を初めて聴きました。GW150914です。",
@@ -57,7 +57,7 @@ namespace BlackHoleEffect
 
         public static readonly string[] LinesZh =
         {
-            "两个黑洞正在互相绕转。它们因引力波而失去能量，沿着螺旋轨道慢慢靠近。",
+            "如果两个黑洞彼此靠得很近，会发生什么？它们互相绕转，因引力波失去能量，沿着螺旋轨道慢慢靠近。",
             "越靠近，公转越快，时空的涟漪——引力波——发出的音调也越来越高。这就是LIGO听到的“啁啾”声。",
             "并合！两个视界合而为一，相当于三个太阳的质量化作纯粹的引力波能量释放到宇宙中。",
             "留下的是一个更大、快速旋转的黑洞。2015年9月14日，人类第一次听到了这个声音——GW150914。",
@@ -232,16 +232,18 @@ namespace BlackHoleEffect
             float finalMass = 0.95f * mTotal;
             Vector3 finalScale = savedScale * finalMass;
 
-            // Gravitational waves: three expanding glowing rings rippling
-            // outward through the disk plane.
-            rings = new LineRenderer[3];
+            // Gravitational waves: five expanding wavefronts, each deformed
+            // by the actual + polarization pattern of a merger — radius ∝
+            // 1 + ε·cos(2φ − ψ) with the quadrupole pattern rotating on,
+            // thinning out as they expand (wave amplitude falls as 1/r).
+            rings = new LineRenderer[5];
             ringMat = new Material(Shader.Find("BlackHole/PhotonTrail"));
-            ringMat.SetColor("_Tint", new Color(1.2f, 1.6f, 2.6f, 1f));
+            ringMat.SetColor("_Tint", new Color(1.5f, 2.0f, 3.3f, 1f));
             ringMat.SetFloat("_HeadBoost", 0f);
             ringMat.SetFloat("_TailFade", 0f);
-            ringMat.SetFloat("_PulseAmount", 0.15f);
-            const int RingSegs = 72;
-            for (int i = 0; i < 3; i++)
+            ringMat.SetFloat("_PulseAmount", 0f);
+            const int RingSegs = 96;
+            for (int i = 0; i < rings.Length; i++)
             {
                 var go = new GameObject("GW Ring");
                 go.transform.position = controller.transform.position;
@@ -274,20 +276,25 @@ namespace BlackHoleEffect
                 Vector3 axU = Vector3.Cross(toCam, axR);
                 Vector3 lift = toCam * (1.1f * controller.transform.localScale.x);
 
-                for (int i = 0; i < 3; i++)
+                // ψ spins the quadrupole pattern — the visual echo of the
+                // ringdown; each front launches 0.45 s after the previous.
+                float psi = t * 5.2f;
+                for (int i = 0; i < rings.Length; i++)
                 {
-                    float ts = t - i * 0.6f;
-                    if (ts < 0f) { rings[i].startColor = rings[i].endColor = Color.clear; continue; }
-                    float ks = Mathf.Clamp01(ts / 3.4f);
-                    float radius = Mathf.Lerp(1.4f, 24f, ks) * savedScale.x;
-                    float fade = Mathf.Pow(1f - ks, 1.6f);
-                    rings[i].widthMultiplier = Mathf.Lerp(0.28f, 0.9f, ks) * savedScale.x;
+                    float ts = t - i * 0.45f;
+                    float ks = Mathf.Clamp01(ts / 3.6f);
+                    if (ts < 0f || ks >= 1f) { rings[i].startColor = rings[i].endColor = Color.clear; continue; }
+                    float radius = Mathf.Lerp(1.3f, 26f, Mathf.Pow(ks, 0.85f)) * savedScale.x;
+                    float eps = 0.11f * (1f - ks);              // deformation dies down
+                    float fade = Mathf.Pow(1f - ks, 1.7f);
+                    rings[i].widthMultiplier = Mathf.Lerp(0.5f, 0.1f, ks) * savedScale.x;
                     rings[i].startColor = rings[i].endColor = new Color(1f, 1f, 1f, fade);
                     for (int sgm = 0; sgm < RingSegs; sgm++)
                     {
                         float angR = sgm / (float)RingSegs * Mathf.PI * 2f;
+                        float rr = radius * (1f + eps * Mathf.Cos(2f * angR - psi));
                         rings[i].SetPosition(sgm,
-                            center + (axR * Mathf.Cos(angR) + axU * Mathf.Sin(angR)) * radius + lift);
+                            center + (axR * Mathf.Cos(angR) + axU * Mathf.Sin(angR)) * rr + lift);
                     }
                 }
                 yield return null;

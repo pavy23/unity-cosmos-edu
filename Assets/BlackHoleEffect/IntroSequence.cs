@@ -78,6 +78,9 @@ namespace BlackHoleEffect
         {
             // A short beat so the scene (canvas, narration, audio) settles in.
             yield return new WaitForSeconds(0.8f);
+            // If the user already launched something in that first moment
+            // (F6/F7/tour), don't hijack their experience.
+            if (controls != null && controls.CinematicBusy) yield break;
             Play();
         }
 
