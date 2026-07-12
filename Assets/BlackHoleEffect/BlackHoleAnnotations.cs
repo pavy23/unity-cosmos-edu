@@ -249,8 +249,14 @@ namespace BlackHoleEffect
                 e.label.gameObject.SetActive(thisVisible);
                 if (!thisVisible) continue;
 
+                // During the guided tour (focus mode) the narration card owns
+                // the bottom of the screen — mirror low labels above the
+                // equator so label text never overlaps the card subtitles.
+                Vector2 labelDir = e.labelDirRs;
+                if (focusIndex >= 0 && labelDir.y < 0f) labelDir.y = -labelDir.y;
+
                 Vector3 anchor = center + (right * e.anchorDirRs.x + up * e.anchorDirRs.y) * rs + bias;
-                Vector3 labelPos = center + (right * e.labelDirRs.x + up * e.labelDirRs.y) * rs + bias;
+                Vector3 labelPos = center + (right * labelDir.x + up * labelDir.y) * rs + bias;
 
                 // Scale text/lines with the hole so labels work from room-scale
                 // MR (Rs ~ 0.1 m) up to the showcase scene (Rs = 0.5 m).
