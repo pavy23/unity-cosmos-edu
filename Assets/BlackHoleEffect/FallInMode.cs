@@ -78,15 +78,21 @@ namespace BlackHoleEffect
         /// <summary>Unspoken gray live-distance line under the caption.</summary>
         static string RLine(float r) => "\n<color=#9AA3B5>r = " + r.ToString("0.0") + " Rs</color>";
 
+        /// <summary>tiltFrom/tiltTo: upward camera pitch in degrees — near the
+        /// horizon the only remaining light is overhead, so looking straight
+        /// at the hole would show nothing but black for many seconds.</summary>
         IEnumerator Glide(float rFrom, float rTo, float dur, float ease,
-                          Vector3 dir, float rs, System.Func<float, string> captionFor)
+                          Vector3 dir, float rs, System.Func<float, string> captionFor,
+                          float tiltFrom = 0f, float tiltTo = 0f)
         {
             for (float t = 0f; t < dur; t += Time.deltaTime)
             {
-                float k = Mathf.Pow(Mathf.Clamp01(t / dur), ease);
-                float r = Mathf.Lerp(rFrom, rTo, k);
+                float u = Mathf.Clamp01(t / dur);
+                float r = Mathf.Lerp(rFrom, rTo, Mathf.Pow(u, ease));
                 transform.position = hole.position + dir * (r * rs);
                 transform.LookAt(hole.position);
+                float tilt = Mathf.Lerp(tiltFrom, tiltTo, Mathf.SmoothStep(0f, 1f, u));
+                if (tilt != 0f) transform.Rotate(-tilt, 0f, 0f);
                 if (captionFor != null) Caption(captionFor(r));
                 yield return null;
             }
@@ -141,12 +147,15 @@ namespace BlackHoleEffect
                 "潮汐力が体を引き伸ばします。影が視界の半分を呑み込みました。",
                 "潮汐力开始拉伸你的身体。阴影已吞没一半视野。") + RLine(r));
 
+            // The camera tilts upward here: the caption says the last light
+            // closes in OVERHEAD, so we look up and actually show it instead
+            // of staring into an already-black hole for six seconds.
             len = Narrate(4);
             yield return Glide(1.9f, 1.05f, Mathf.Max(3.2f, len + 0.3f), 0.9f, dir, rs, r => Loc.T(
                 "마지막 빛의 고리가 머리 위로 좁혀듭니다.",
                 "The last ring of light closes in overhead.",
                 "最後の光のリングが頭上で狭まっていきます。",
-                "最后的光环在头顶收拢。") + RLine(r));
+                "最后的光环在头顶收拢。") + RLine(r), 0f, 40f);
             yield return new WaitForSeconds(1.6f); // hold at the brink
 
             len = Narrate(5);
@@ -155,8 +164,22 @@ namespace BlackHoleEffect
                 "We have crossed the event horizon.\nNo signal can ever reach the outside universe again.",
                 "事象の地平面を通過しました。\n外の宇宙へは、もうどんな信号も送れません。",
                 "我们已越过事件视界。\n再也无法向外面的宇宙发出任何信号。"));
-            yield return Glide(1.05f, 0.35f, 1.6f, 1f, dir, rs, null);
-            yield return new WaitForSeconds(Mathf.Max(2.6f, len - 1.1f)); // let the darkness land
+            yield return Glide(1.05f, 0.35f, 1.6f, 1f, dir, rs, null, 40f, 60f);
+            // A short beat of true darkness — then the looking-back circle
+            // rises while the horizon line finishes, so pure black never
+            // outstays its welcome.
+            yield return new WaitForSeconds(2.4f);
+            EnsureSkyImage();
+            skyImage.gameObject.SetActive(true);
+            for (float t = 0f; t < 1.1f; t += Time.deltaTime)
+            {
+                float k = t / 1.1f;
+                float size = Mathf.Lerp(30f, 640f, Mathf.SmoothStep(0f, 1f, k));
+                skyImage.rectTransform.sizeDelta = new Vector2(size, size);
+                skyImage.color = new Color(1f, 0.98f, 0.92f, k);
+                yield return null;
+            }
+            yield return new WaitForSeconds(Mathf.Max(0f, len - 1.6f - 2.4f - 1.1f));
 
             // --- Epilogue: turn around. The view "forward" (toward the
             // singularity) really is black — but looking back, the outside
@@ -168,31 +191,36 @@ namespace BlackHoleEffect
                 "Looking back, the outside universe never vanishes.\nThe whole sky gathers into a shrinking, blueshifting circle of light.",
                 "後ろを振り返ると、外の宇宙は消えていません。\n空全体が、狭まっていく青い光の円の中に集まって見えます。",
                 "回头看，外面的宇宙并没有消失。\n整个天空聚成一个越来越小、越来越蓝的光圈。"));
-            // Drawn as a screen-space image: the camera sits inside the
-            // raymarch quad here, so world-space props would be occluded.
-            EnsureSkyImage();
-            skyImage.gameObject.SetActive(true);
-            float lookBack = Mathf.Max(7f, len + 0.6f);
+            float lookBack = Mathf.Max(7f, len + 0.4f);
             for (float t = 0f; t < lookBack; t += Time.deltaTime)
             {
                 float k = t / lookBack;
-                float size = Mathf.Lerp(640f, 16f, Mathf.Pow(k, 1.35f));
+                float size = Mathf.Lerp(640f, 70f, Mathf.Pow(k, 1.2f));
                 skyImage.rectTransform.sizeDelta = new Vector2(size, size);
-                // White → blueshifted, fading out only at the very end.
-                Color c = Color.Lerp(new Color(1f, 0.98f, 0.92f), new Color(0.45f, 0.65f, 1f), k);
-                c.a = Mathf.Clamp01((1f - k) * 8f);
-                skyImage.color = c;
+                skyImage.color = Color.Lerp(new Color(1f, 0.98f, 0.92f), new Color(0.45f, 0.65f, 1f), k);
                 yield return null;
             }
-            skyImage.gameObject.SetActive(false);
 
+            // The last point of light dies while physics has its final word —
+            // the closing line is never spoken over a totally empty screen.
             len = Narrate(7);
             Caption(Loc.T(
                 "이 안에서는 모든 미래의 경로가 중심 특이점을 향합니다.\n여기까지가 물리학이 말할 수 있는 전부입니다.",
                 "In here, every future path leads to the central singularity.\nThis is as far as physics can speak.",
                 "この中では、あらゆる未来の経路が中心の特異点へ向かいます。\nここから先は、物理学が語れる限界です。",
                 "在这里，所有未来的路径都通向中心奇点。\n物理学能讲述的，到此为止。"));
-            yield return new WaitForSeconds(Mathf.Max(4f, len + 0.6f));
+            float die = Mathf.Max(4.5f, len + 0.5f);
+            for (float t = 0f; t < die; t += Time.deltaTime)
+            {
+                float k = t / die;
+                float size = Mathf.Lerp(70f, 12f, k);
+                skyImage.rectTransform.sizeDelta = new Vector2(size, size);
+                Color c = Color.Lerp(new Color(0.45f, 0.65f, 1f), new Color(0.25f, 0.35f, 0.85f), k);
+                c.a = Mathf.Pow(1f - k, 1.3f);
+                skyImage.color = c;
+                yield return null;
+            }
+            skyImage.gameObject.SetActive(false);
 
             Caption(Loc.T(
                 "체험이 끝났습니다 — 원래 위치로 돌아갑니다.",
