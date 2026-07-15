@@ -352,7 +352,10 @@ namespace BlackHoleEffect.Editor
             {
                 var ball = GameObject.CreatePrimitive(PrimitiveType.Sphere);
                 ball.name = "Star Ball " + (i + 1);
-                ball.transform.position = new Vector3(-0.24f + 0.24f * i, 1.0f, 0.85f);
+                // Within arm's reach (~0.6 m). At the old 0.85 m they measured
+                // 1.25 m from the eye — grabbable only by ray, which makes
+                // "pick up a star and throw it in" a pointing exercise.
+                ball.transform.position = new Vector3(-0.2f + 0.2f * i, 1.05f, 0.42f);
                 ball.transform.localScale = Vector3.one * 0.06f;
                 ball.GetComponent<MeshRenderer>().sharedMaterial = starBallMats[i];
                 var ballRb = ball.AddComponent<Rigidbody>();
@@ -406,6 +409,12 @@ namespace BlackHoleEffect.Editor
             var fallIn = cam.gameObject.AddComponent<FallInMode>();
             fallIn.hole = hole.transform;
 
+            // Birth of the hole. Its star and blast are sized off the hole's Rs,
+            // so the room-scale hole gets a room-scale supernova.
+            var intro = cam.gameObject.AddComponent<IntroSequence>();
+            intro.holeRenderer = hole.GetComponent<MeshRenderer>();
+            intro.controller = ctrl;
+
             // Drives every toggle and attaches the theory panel; xrMode keeps its
             // hands off the tracked camera pose and the passthrough alpha.
             var controls = cam.gameObject.AddComponent<DesktopControls>();
@@ -423,6 +432,8 @@ namespace BlackHoleEffect.Editor
             controls.audioScape = audioScape;
             controls.fallIn = fallIn;
             fallIn.controls = controls;
+            controls.intro = intro;
+            intro.controls = controls;
 
             var mrControls = cam.gameObject.AddComponent<MRControls>();
             mrControls.controls = controls;

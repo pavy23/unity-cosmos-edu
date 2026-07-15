@@ -22,6 +22,13 @@ namespace BlackHoleEffect
 
         static readonly List<GameObject> menuRows = new();
 
+        // 58px measured 2.5° tall on the headset — over the 2° floor for a ray
+        // target but under the ~3° hand tracking needs once jitter is counted,
+        // and the rows were 2.9° apart, close enough to mis-hit the next one.
+        const float ButtonW = 224f, ButtonH = 84f, ButtonGap = 10f;
+        const float RowPitch = 96f;
+        const float FrameW = 1920f;
+
         /// <summary>Hide/show the hand menu with the rest of the overlays. The
         /// narrated experiences own the view — and their captions land on the
         /// same bottom strip the menu occupies. Static because DesktopControls
@@ -52,13 +59,20 @@ namespace BlackHoleEffect
             menuRows.Clear(); // a DontSave menu outlives play mode; never stack sessions
             var canvas = BlackHoleUI.EnsureCanvas(GetComponentInChildren<Camera>() ?? Camera.main);
 
-            // Two rows hugging the bottom edge of the frame, mirroring how the
-            // desktop help bar groups the features.
-            var row1 = new (System.Func<string> text, UnityEngine.Events.UnityAction act)[]
+            // Three rows along the bottom of the frame, grouped the way the
+            // desktop help bar groups its key legend: experiences / the hole
+            // itself / phenomena. A row must stay inside the 1920-wide frame —
+            // nine buttons would run 2096 and hang off both edges.
+            var experiences = new (System.Func<string> text, UnityEngine.Events.UnityAction act)[]
             {
                 (() => Loc.T("가이드 투어", "Guided tour", "ガイドツアー", "导览"), ToggleTour),
+                (() => Loc.T("블랙홀 탄생", "Birth", "ブラックホール誕生", "黑洞诞生"), BeginIntro),
                 (() => Loc.T("낙하 체험", "Fall in", "落下体験", "坠入体验"), BeginFallIn),
                 (() => Loc.T("블랙홀 병합", "Merger", "ブラックホール合体", "黑洞合并"), BeginMerger),
+            };
+
+            var blackHole = new (System.Func<string> text, UnityEngine.Events.UnityAction act)[]
+            {
                 (() => Loc.T("원반 색상", "Disk colors", "円盤の色", "吸积盘颜色"), () => controls.CycleColor()),
                 (() => Loc.T("질량", "Mass", "質量", "质量"), () => controls.CycleMass()),
                 (() => Loc.T("스핀", "Spin", "スピン", "自旋"), CycleSpin),
@@ -66,7 +80,7 @@ namespace BlackHoleEffect
                 (() => Loc.T("설명 난이도", "Level", "難易度", "难度"), () => controls.CycleDifficulty()),
             };
 
-            var row2 = new (System.Func<string> text, UnityEngine.Events.UnityAction act)[]
+            var phenomena = new (System.Func<string> text, UnityEngine.Events.UnityAction act)[]
             {
                 (() => Loc.T("아인슈타인 링", "Einstein ring", "アインシュタイン環", "爱因斯坦环"), () => controls.ToggleEinstein()),
                 (() => Loc.T("스파게티화", "Spaghettify", "スパゲッティ化", "面条化"), () => controls.ToggleSpaghetti()),
@@ -76,25 +90,35 @@ namespace BlackHoleEffect
                 (() => Loc.T("수식", "Formulas", "数式", "公式"), ToggleTheory),
             };
 
-            BuildRow(canvas.transform, "MR Menu Row 1", row1, 92f);
-            BuildRow(canvas.transform, "MR Menu Row 2", row2, 26f);
+            BuildRow(canvas.transform, "MR Menu Experiences", experiences, 26f + RowPitch * 2f);
+            BuildRow(canvas.transform, "MR Menu BlackHole", blackHole, 26f + RowPitch);
+            BuildRow(canvas.transform, "MR Menu Phenomena", phenomena, 26f);
         }
 
         void BuildRow(Transform parent, string name,
             (System.Func<string> text, UnityEngine.Events.UnityAction act)[] items, float y)
         {
-            const float w = 224f, h = 58f, gap = 10f;
-            float total = items.Length * w + (items.Length - 1) * gap;
+            float w = ButtonW;
+            float total = items.Length * w + (items.Length - 1) * ButtonGap;
+            if (total > FrameW)
+            {
+                // Shrink to fit rather than hang buttons off the edge of the frame,
+                // where they would be unreadable and out of the hand ray's way.
+                w = (FrameW - (items.Length - 1) * ButtonGap) / items.Length;
+                total = FrameW;
+                Debug.LogWarning("MRControls: '" + name + "' has " + items.Length
+                    + " buttons; narrowing them to " + w.ToString("F0") + "px to fit the frame.");
+            }
             float x = -total * 0.5f + w * 0.5f;
 
             foreach (var (text, act) in items)
             {
                 var btn = BlackHoleUI.MakeButton(parent, name + " / " + text(), text(),
-                    new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(x, y), new Vector2(w, h), act);
+                    new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(x, y), new Vector2(w, ButtonH), act);
                 var label = btn.GetComponentInChildren<Text>();
                 if (label != null) localized.Add((label, text));
                 menuRows.Add(btn.gameObject);
-                x += w + gap;
+                x += w + ButtonGap;
             }
         }
 
@@ -119,6 +143,11 @@ namespace BlackHoleEffect
         void BeginFallIn()
         {
             if (controls.fallIn != null && !controls.CinematicBusy) controls.fallIn.Begin();
+        }
+
+        void BeginIntro()
+        {
+            if (controls.intro != null && !controls.CinematicBusy) controls.intro.Play();
         }
 
         void CycleSpin()

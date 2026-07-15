@@ -624,9 +624,7 @@ namespace BlackHoleEffect
             if (stopButton == null)
             {
                 if (!on) return;
-                var canvas = BlackHoleUI.EnsureCanvas(GetComponent<Camera>());
-                stopButton = BlackHoleUI.MakeButton(canvas.transform, "FallIn Stop", "",
-                    new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-26f, -26f), new Vector2(170f, 44f), Abort);
+                stopButton = BlackHoleUI.MakeCinematicButton(GetComponent<Camera>(), "FallIn Stop", Abort);
             }
             stopButton.gameObject.SetActive(on);
             if (on)

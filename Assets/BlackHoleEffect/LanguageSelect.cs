@@ -15,6 +15,14 @@ namespace BlackHoleEffect
         static Text mainLabel;
         static RectTransform dropdown;
 
+        /// <summary>
+        /// Hand rays need a bigger target than a mouse does. At the desktop's
+        /// 150x40 this widget measured 1.5° tall in the headset — under the ~3°
+        /// a ray can reliably hold once hand jitter is counted — so the whole
+        /// thing scales up in MR. Desktop is unchanged (factor 1).
+        /// </summary>
+        static float S => BlackHoleUI.WorldSpace ? 2.5f : 1f;
+
         static readonly (Loc.Lang lang, string label)[] Options =
         {
             (Loc.Lang.Korean,   "한국어"),
@@ -23,12 +31,19 @@ namespace BlackHoleEffect
             (Loc.Lang.Chinese,  "中文"),
         };
 
+        /// <summary>Where the widget hangs. Desktop: the top-right corner. MR: top
+        /// centre — scaled up for hand rays it no longer fits that corner beside
+        /// the theory panel, and a permanent control has no business at 41° off
+        /// axis anyway.</summary>
+        static Vector2 Anchor => BlackHoleUI.WorldSpace ? new Vector2(0.5f, 1f) : new Vector2(1f, 1f);
+        static Vector2 Offset => BlackHoleUI.WorldSpace ? new Vector2(0f, -26f) : new Vector2(-26f, -26f);
+
         public static void CreateWidget()
         {
             if (mainButton != null) return;
             var canvas = BlackHoleUI.EnsureCanvas(Camera.main);
             mainButton = BlackHoleUI.MakeButton(canvas.transform, "Language Button", "",
-                new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-26f, -26f), new Vector2(150f, 40f),
+                Anchor, Anchor, Offset, new Vector2(150f * S, 40f * S),
                 ToggleDropdown);
             mainLabel = mainButton.GetComponentInChildren<Text>();
             UpdateLabel();
@@ -64,13 +79,15 @@ namespace BlackHoleEffect
         {
             var canvas = BlackHoleUI.EnsureCanvas(Camera.main);
             dropdown = BlackHoleUI.MakePanel(canvas.transform, "Language Dropdown",
-                new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-26f, -72f), new Vector2(150f, 4f + Options.Length * 46f),
+                Anchor, Anchor, new Vector2(Offset.x, -72f * S),
+                new Vector2(150f * S, (4f + Options.Length * 46f) * S),
                 accentLine: false);
             for (int i = 0; i < Options.Length; i++)
             {
                 var lang = Options[i].lang;
                 BlackHoleUI.MakeButton(dropdown, "Lang " + Options[i].label, Options[i].label,
-                    new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -4f - i * 46f), new Vector2(138f, 42f),
+                    new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, (-4f - i * 46f) * S),
+                    new Vector2(138f * S, 42f * S),
                     () =>
                     {
                         Loc.SetLanguage(lang);

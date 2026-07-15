@@ -43,7 +43,20 @@ namespace BlackHoleEffect
 
         static bool? worldSpaceOverride;
 
-        /// <summary>Width of the 1920px-wide frame once hung in the room.</summary>
+        /// <summary>
+        /// Width of the 1920px-wide frame once hung in the room.
+        ///
+        /// Do not narrow this to pull the corner panels inward. It was tried at
+        /// 2.2 m: corners came in from 42° to 36°, but the canvas scales uniformly,
+        /// so every glyph shrank with it and the theory panel's fine print fell to
+        /// 24 arcmin. Six degrees of head turn is not worth that — and the slant
+        /// that actually hurt legibility is fixed by facing the panels instead
+        /// (MRWorldCanvas.facePanels).
+        ///
+        /// At 2.6 m the smallest text measures ~33 arcmin. For scale: 14 px on a
+        /// 1080p monitor at 60 cm is ~22 arcmin, so this is already half again
+        /// larger than what the desktop build asks people to read.
+        /// </summary>
         public static float WorldWidthMeters = 2.6f;
 
         /// <summary>
@@ -63,11 +76,18 @@ namespace BlackHoleEffect
             canvas = null;
         }
 
-        // Theme
-        public static readonly Color PanelBg = new Color(0.03f, 0.045f, 0.075f, 0.86f);
+        // Theme. The two colours that carry text contrast are firmer in MR: a
+        // panel there is composited over whatever the room happens to be, which
+        // can be a bright window, and the desktop's 0.86 backing plus dim grey
+        // secondary text has no margin for that.
+        public static Color PanelBg => WorldSpace
+            ? new Color(0.02f, 0.03f, 0.055f, 0.95f)
+            : new Color(0.03f, 0.045f, 0.075f, 0.86f);
         public static readonly Color Accent = new Color(1f, 0.76f, 0.42f, 0.95f);
         public static readonly Color TextPrimary = new Color(0.91f, 0.93f, 0.96f, 1f);
-        public static readonly Color TextSecondary = new Color(0.62f, 0.66f, 0.74f, 1f);
+        public static Color TextSecondary => WorldSpace
+            ? new Color(0.78f, 0.82f, 0.88f, 1f)
+            : new Color(0.62f, 0.66f, 0.74f, 1f);
         public static readonly Color TitleGold = new Color(1f, 0.8f, 0.5f, 1f);
 
         static Canvas canvas;
@@ -247,6 +267,29 @@ namespace BlackHoleEffect
                 new Vector2(size.x - 10f, size.y - 6f), FontStyle.Bold);
             t.text = label;
             return btn;
+        }
+
+        /// <summary>
+        /// The stop/skip control every cinematic puts on screen — the way out of
+        /// a narrated experience that has taken over the view.
+        ///
+        /// Desktop keeps it as a corner chip, where the mouse reaches it instantly.
+        /// MR cannot: in the corner of the world frame it measured 1.5° tall and
+        /// 42° off-axis — under the ~2° a hand ray can reliably hit, and behind a
+        /// head turn. That is the control a passenger wants when the fall is making
+        /// them queasy, so in MR it is larger and sits along the bottom centre.
+        /// </summary>
+        public static Button MakeCinematicButton(Camera cam, string name,
+            UnityEngine.Events.UnityAction onClick)
+        {
+            var canvas = EnsureCanvas(cam);
+            if (WorldSpace)
+                return MakeButton(canvas.transform, name, "",
+                    new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
+                    new Vector2(0f, 26f), new Vector2(300f, 96f), onClick);
+            return MakeButton(canvas.transform, name, "",
+                new Vector2(1f, 1f), new Vector2(1f, 1f),
+                new Vector2(-26f, -26f), new Vector2(170f, 44f), onClick);
         }
 
         static void EnsureInteraction()

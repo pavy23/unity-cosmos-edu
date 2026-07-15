@@ -19,6 +19,21 @@ namespace BlackHoleEffect
 
         public bool IsPlaying { get; private set; }
 
+        /// <summary>MR only: the star, the blast and the corona are all additive,
+        /// and additive blending saturates the alpha the passthrough compositor
+        /// reads — it would punch black holes in the room. With the room traded
+        /// for space none of that matters, and the desktop staging survives intact.</summary>
+        MRSpaceWindow spaceWindow;
+
+        /// <summary>
+        /// The star and its blast are sized in metres, tuned against the desktop
+        /// hole (Rs = 0.5 m). The MR hole is Rs = 0.12 m and sits 1.6 m away, where
+        /// those same numbers put the red giant's surface 15 cm from the viewer's
+        /// face and expand the shock to 22 m. Scaling by the actual Rs keeps the
+        /// staging proportional — and leaves the desktop bit-identical (factor 1).
+        /// </summary>
+        float PropScale => holeRenderer != null ? holeRenderer.transform.lossyScale.x / 0.5f : 1f;
+
         Text caption;
         RectTransform captionPanel;
         Image flash;
@@ -79,6 +94,7 @@ namespace BlackHoleEffect
         public void Play()
         {
             if (!Application.isPlaying || IsPlaying) return;
+            spaceWindow = FindAnyObjectByType<MRSpaceWindow>();
             routine = StartCoroutine(Run());
         }
 
@@ -98,6 +114,7 @@ namespace BlackHoleEffect
                 controller.diskBrightness = savedBrightness;
                 controller.Apply();
             }
+            if (spaceWindow != null) spaceWindow.CloseNow(); // skip = out now, no fade
             Finish();
         }
 
@@ -114,9 +131,7 @@ namespace BlackHoleEffect
             if (skipButton == null)
             {
                 if (!on) return;
-                var canvas = BlackHoleUI.EnsureCanvas(GetComponent<Camera>());
-                skipButton = BlackHoleUI.MakeButton(canvas.transform, "Intro Skip", "",
-                    new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-26f, -26f), new Vector2(170f, 44f), Skip);
+                skipButton = BlackHoleUI.MakeCinematicButton(GetComponent<Camera>(), "Intro Skip", Skip);
             }
             skipButton.gameObject.SetActive(on);
             if (on)
@@ -129,6 +144,10 @@ namespace BlackHoleEffect
             IsPlaying = true;
             if (controls != null) controls.SetImmersive(true);
             ShowSkip(true);
+
+            // MR: hand the room over before a star ignites in it.
+            if (spaceWindow != null) yield return spaceWindow.Open(1.2f);
+            float props = PropScale;
 
             float baseBrightness = controller != null ? controller.diskBrightness : 9.5f;
             savedBrightness = baseBrightness;
@@ -159,7 +178,7 @@ namespace BlackHoleEffect
             for (float t = 0f; t < dur; t += Time.deltaTime)
             {
                 float pulse = 1.1f + 0.04f * Mathf.Sin(t * 2.6f);
-                star.transform.localScale = Vector3.one * pulse;
+                star.transform.localScale = Vector3.one * pulse * props;
                 star.transform.Rotate(0f, 4f * Time.deltaTime, 0f);
                 yield return null;
             }
@@ -171,7 +190,7 @@ namespace BlackHoleEffect
             {
                 float k = Mathf.SmoothStep(0f, 1f, Mathf.Min(t / Mathf.Min(dur, 5.5f), 1f));
                 float wobble = 1f + 0.05f * Mathf.Sin(t * 5.3f) + 0.035f * Mathf.Sin(t * 2.1f + 1.7f);
-                star.transform.localScale = Vector3.one * Mathf.Lerp(1.1f, 2.9f, k) * wobble;
+                star.transform.localScale = Vector3.one * Mathf.Lerp(1.1f, 2.9f, k) * wobble * props;
                 star.transform.Rotate(0f, 2.5f * Time.deltaTime, 0f);
                 starMat.SetColor("_StarColor", Color.Lerp(new Color(2.6f, 2.3f, 1.7f), new Color(2.9f, 0.62f, 0.18f), k));
                 starMat.SetFloat("_Granulation", Mathf.Lerp(0.3f, 0.7f, k));
@@ -213,11 +232,11 @@ namespace BlackHoleEffect
             {
                 float k = Mathf.Min(t / ejectaTime, 1f);
                 // Ejecta: warm, decelerating.
-                shell.transform.localScale = Vector3.one * Mathf.Lerp(0.2f, 16f, Mathf.Pow(k, 0.6f));
+                shell.transform.localScale = Vector3.one * Mathf.Lerp(0.2f, 16f, Mathf.Pow(k, 0.6f)) * props;
                 shellMat.SetColor("_Tint", new Color(3.2f, 2.6f, 2.0f, Mathf.Pow(1f - k, 1.6f)));
                 // Shock front: thin, blue, faster, fades sooner.
                 float ks = Mathf.Min(t / 1.7f, 1f);
-                shock.transform.localScale = Vector3.one * Mathf.Lerp(0.2f, 22f, Mathf.Pow(ks, 0.55f));
+                shock.transform.localScale = Vector3.one * Mathf.Lerp(0.2f, 22f, Mathf.Pow(ks, 0.55f)) * props;
                 shockMat.SetColor("_Tint", new Color(1.6f, 2.4f, 3.6f, 0.55f * Mathf.Pow(1f - ks, 2.2f)));
                 // Retina flash right at detonation.
                 if (flash != null)
@@ -244,6 +263,9 @@ namespace BlackHoleEffect
             }
             yield return new WaitForSeconds(2f);
 
+            // The newborn hole is the last thing seen in space; then the room
+            // returns around it and exploration begins.
+            if (spaceWindow != null) yield return spaceWindow.Close(1.2f);
             Finish();
         }
 
@@ -282,16 +304,9 @@ namespace BlackHoleEffect
         void EnsureFlash()
         {
             if (flash != null) return;
-            var canvas = BlackHoleUI.EnsureCanvas(GetComponent<Camera>());
-            var go = new GameObject("Supernova Flash") { hideFlags = HideFlags.DontSave };
-            go.transform.SetParent(canvas.transform, false);
-            var rt = go.AddComponent<RectTransform>();
-            rt.anchorMin = Vector2.zero;
-            rt.anchorMax = Vector2.one;
-            rt.offsetMin = rt.offsetMax = Vector2.zero;
-            flash = go.AddComponent<Image>();
-            flash.color = Color.clear;
-            flash.raycastTarget = false;
+            // A detonation has to fill the view. Stretched across the MR frame it
+            // would read as a white rectangle hanging in space instead.
+            flash = BlackHoleUI.MakeFullViewOverlay(GetComponent<Camera>(), "Supernova Flash");
         }
 
         void Caption(string text)
