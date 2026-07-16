@@ -23,7 +23,7 @@ Shader "MilkyWay/GalaxyVolume"
         _Clumpiness("Cloud Clumpiness", Range(0.0, 1.5)) = 0.85
 
         [Header(Quality)]
-        _Steps("March Steps", Range(24, 160)) = 80
+        _Steps("March Steps", Range(24, 160)) = 64
 
         [Header(Encounter (driven by AndromedaCollision))]
         _ArmStrength("Arm Strength", Range(0.0, 1.5)) = 1.0
@@ -96,17 +96,20 @@ Shader "MilkyWay/GalaxyVolume"
                     f.z);
             }
 
+            // Two octaves, not three: the third octave's detail is smaller than
+            // a march step at galaxy scales, so it cost two noise evaluations
+            // per sample for texture nobody could see. Measured, not assumed.
             float mw_fbm(float3 p)
             {
                 float v = 0.0, a = 0.5;
                 [unroll]
-                for (int i = 0; i < 3; i++)
+                for (int i = 0; i < 2; i++)
                 {
                     v += a * mw_vnoise(p);
                     p = p * 2.13 + 11.7;
                     a *= 0.5;
                 }
-                return v;
+                return v * 1.33; // renormalize to the 3-octave amplitude range
             }
 
             // ---------------- galaxy model ----------------

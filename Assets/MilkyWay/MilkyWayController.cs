@@ -31,7 +31,7 @@ namespace MilkyWay
         [Range(0f, 1.5f)] public float clumpiness = 0.85f;
 
         [Header("Quality")]
-        [Range(24, 160)] public int marchSteps = 80;
+        [Range(24, 160)] public int marchSteps = 64;
 
         /// <summary>The Sun's galactocentric radius in kpc — the anchor for the
         /// zoom journey and the night-sky view.</summary>

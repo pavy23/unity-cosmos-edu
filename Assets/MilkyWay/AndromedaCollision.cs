@@ -346,9 +346,16 @@ namespace MilkyWay
 
         // ---------------- UI ----------------
 
+        float yearTimer;
+
         void YearLine(float u)
         {
             if (yearline == null) return;
+            // 4 Hz: rebuilding the string every frame is the physics panel's
+            // old garbage-per-frame mistake all over again.
+            yearTimer -= Time.deltaTime;
+            if (yearTimer > 0f) return;
+            yearTimer = 0.25f;
             // ~5 Gyr to full coalescence in the current best simulations.
             float gyr = u * 5f;
             yearline.text = "<color=#9AA3B5>+" + (gyr * 10f).ToString("0.0")
