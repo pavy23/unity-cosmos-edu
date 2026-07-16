@@ -310,18 +310,9 @@ namespace BlackHoleEffect
             // Always-available language selector in the top-right corner.
             if (Application.isPlaying) LanguageSelect.CreateWidget();
 
-            // The XR Interaction Simulator auto-spawns from a GLOBAL editor
-            // setting (Assets/XRI/Settings), so it also turns up here on the
-            // desktop — overlay UI, hotkeys and simulated devices in a scene
-            // that is driven by mouse and keyboard. Send it away. The MR scene
-            // runs with xrMode=true and keeps it. Editor-only either way: the
-            // setting never instantiates it in a player build.
-            if (Application.isPlaying && !xrMode)
-            {
-                var sim = FindAnyObjectByType<
-                    UnityEngine.XR.Interaction.Toolkit.Inputs.Simulation.XRInteractionSimulator>();
-                if (sim != null) Destroy(sim.gameObject);
-            }
+            // (The XR Interaction Simulator is swept scene-wide by
+            // XRSimulatorSceneGuard — any scene without an XROrigin loses it.
+            // No per-scene guard needed here.)
         }
 
         /// <summary>Gentle bloom so the HDR disk (and GW rings) actually glow.
