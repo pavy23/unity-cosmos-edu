@@ -33,8 +33,8 @@ namespace MilkyWay
         Text caption;
         RectTransform captionPanel;
         Button stopButton;
-        GameObject ground;
-        Material groundMat;
+        GameObject stage;          // ground + ridge + airglow, faded as one
+        Material groundMat, ridgeMat, glowMat;
 
         public void Begin()
         {
@@ -158,11 +158,11 @@ namespace MilkyWay
                 transform.LookAt(Vector3.Lerp(sun + toCentre * 8f, Vector3.zero,
                     Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.15f, 0.6f, u))));
 
-                // Ground fades away in the first quarter of the climb.
-                if (groundMat != null)
+                // The night stage fades away in the first quarter of the climb.
+                if (stage != null)
                 {
                     float a = 1f - Mathf.InverseLerp(0.02f, 0.18f, u);
-                    groundMat.color = new Color(0.012f, 0.015f, 0.022f, a);
+                    FadeStage(a);
                     if (a <= 0f) DestroyGround();
                 }
 
@@ -193,37 +193,105 @@ namespace MilkyWay
 
         // ---------------- props ----------------
 
-        /// <summary>A matte near-black disk underfoot: the horizon that makes
-        /// stage 0 read as "standing outside at night" rather than floating in
-        /// space. Pure staging — it fades out the moment we lift off.</summary>
+        /// <summary>
+        /// The night stage: a dark ground plane, a NOISY MOUNTAIN RIDGE running
+        /// the whole horizon, and a faint blue airglow band above it — the three
+        /// cues that read as "standing on Earth at night" instead of "floating
+        /// in space next to a black disk". Pure staging; fades out at liftoff.
+        /// </summary>
         void EnsureGround(Vector3 sun)
         {
-            if (ground != null) return;
-            ground = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            ground.name = "Night Ground (staging)";
+            if (stage != null) return;
+            stage = new GameObject("Night Stage (staging)");
+            stage.transform.position = sun;
+
+            var sprite = Shader.Find("Sprites/Default"); // vertex colours + alpha, draws fine in URP
+
+            // ---- ground: matte disc just below the eye ----
+            var ground = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            ground.name = "Ground";
             Object.Destroy(ground.GetComponent<Collider>());
-            ground.transform.position = sun + Vector3.down * 0.012f;
+            ground.transform.SetParent(stage.transform, false);
+            ground.transform.localPosition = Vector3.down * 0.012f;
             ground.transform.localScale = new Vector3(1.2f, 0.001f, 1.2f);
-            var shader = Shader.Find("Universal Render Pipeline/Unlit");
-            groundMat = new Material(shader);
-            groundMat.SetFloat("_Surface", 1f); // transparent
-            groundMat.SetFloat("_Blend", 0f);
-            groundMat.renderQueue = 3100;       // over the volume: the ground occludes the sky below
-            groundMat.SetOverrideTag("RenderType", "Transparent");
-            groundMat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
-            groundMat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-            groundMat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-            groundMat.SetInt("_ZWrite", 0);
-            groundMat.color = new Color(0.012f, 0.015f, 0.022f, 1f);
+            groundMat = new Material(sprite) { renderQueue = 3100 };
+            groundMat.color = new Color(0.010f, 0.013f, 0.020f, 1f);
             ground.GetComponent<MeshRenderer>().sharedMaterial = groundMat;
+
+            // ---- mountain ridge: a ring strip whose top edge is noise ----
+            // Reaches well below the eye line so no gap opens between the
+            // silhouette and the ground disc; near-black, or ACES lifts it grey.
+            ridgeMat = new Material(sprite) { renderQueue = 3102 };
+            BuildRing(stage.transform, "Ridge", ridgeMat, 0.5f,
+                yBottom: -0.03f,
+                topOf: a => 0.006f
+                          + 0.028f * Mathf.PerlinNoise(a * 1.7f, 3.7f)
+                          + 0.008f * Mathf.PerlinNoise(a * 6.3f, 9.1f),
+                bottomCol: new Color(0.004f, 0.005f, 0.009f, 1f),
+                topCol: new Color(0.004f, 0.005f, 0.009f, 1f));
+
+            // ---- airglow: a subtle blue gradient above the ridge tops ----
+            glowMat = new Material(sprite) { renderQueue = 3101 };
+            BuildRing(stage.transform, "Airglow", glowMat, 0.55f,
+                yBottom: 0.004f,
+                topOf: a => 0.06f,
+                bottomCol: new Color(0.09f, 0.14f, 0.24f, 0.14f),
+                topCol: new Color(0.09f, 0.14f, 0.24f, 0f));
+        }
+
+        /// <summary>Builds a cylindrical strip around the viewer whose top edge
+        /// height is a function of azimuth — mountains are just noise on a ring.</summary>
+        static void BuildRing(Transform parent, string name, Material mat, float radius,
+            float yBottom, System.Func<float, float> topOf, Color bottomCol, Color topCol)
+        {
+            const int N = 240;
+            var verts = new Vector3[(N + 1) * 2];
+            var cols = new Color[(N + 1) * 2];
+            var tris = new int[N * 6];
+            for (int i = 0; i <= N; i++)
+            {
+                float a = i / (float)N * Mathf.PI * 2f;
+                var dir = new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a));
+                verts[i * 2] = dir * radius + Vector3.up * yBottom;
+                verts[i * 2 + 1] = dir * radius + Vector3.up * topOf(a);
+                cols[i * 2] = bottomCol;
+                cols[i * 2 + 1] = topCol;
+                if (i < N)
+                {
+                    int t = i * 6, v = i * 2;
+                    tris[t] = v; tris[t + 1] = v + 1; tris[t + 2] = v + 2;
+                    tris[t + 3] = v + 1; tris[t + 4] = v + 3; tris[t + 5] = v + 2;
+                }
+            }
+            var mesh = new Mesh { name = name };
+            mesh.vertices = verts;
+            mesh.colors = cols;
+            mesh.triangles = tris;
+            mesh.RecalculateBounds();
+
+            var go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+            go.AddComponent<MeshFilter>().sharedMesh = mesh;
+            var mr = go.AddComponent<MeshRenderer>();
+            mr.sharedMaterial = mat;
+            mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        }
+
+        void FadeStage(float a)
+        {
+            if (groundMat != null) { var c = groundMat.color; c.a = a; groundMat.color = c; }
+            if (ridgeMat != null) { var c = ridgeMat.color; c.a = a; ridgeMat.color = c; }
+            if (glowMat != null) { var c = glowMat.color; c.a = a; glowMat.color = c; }
         }
 
         void DestroyGround()
         {
-            if (ground != null) Object.Destroy(ground);
+            if (stage != null) Object.Destroy(stage);
             if (groundMat != null) Object.Destroy(groundMat);
-            ground = null;
-            groundMat = null;
+            if (ridgeMat != null) Object.Destroy(ridgeMat);
+            if (glowMat != null) Object.Destroy(glowMat);
+            stage = null;
+            groundMat = null; ridgeMat = null; glowMat = null;
         }
 
         // ---------------- UI ----------------
