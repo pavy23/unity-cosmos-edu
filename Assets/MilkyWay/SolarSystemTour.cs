@@ -210,12 +210,32 @@ namespace MilkyWay
                 titleJa = "8. 海王星", titleZh = "8. 海王星" },
         };
 
-        public void StartTour()
+        /// <summary>Jump straight to a body's stop — the exhibit's
+        /// click-a-planet entry point. Starts the tour if it isn't running.</summary>
+        public void StartTourAt(int index)
+        {
+            index = Mathf.Clamp(index, 0, Stops.Length - 1);
+            if (!Running) { StartTour(index); return; }
+            step = index;
+            ApplyStep();
+        }
+
+        /// <summary>Index of the stop that frames this body, or -1.</summary>
+        public static int StopIndexOf(string body)
+        {
+            for (int i = 0; i < Stops.Length; i++)
+                if (Stops[i].body == body) return i;
+            return -1;
+        }
+
+        public void StartTour() => StartTour(0);
+
+        void StartTour(int startStep)
         {
             if (Running || !Application.isPlaying) return;
             if (stageRig == null && stage != null) stageRig = stage.Rig;
             Running = true;
-            step = 0;
+            step = startStep;
             driftDeg = 0f;
 
             savedPos = transform.position;

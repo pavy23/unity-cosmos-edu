@@ -548,8 +548,11 @@ namespace MilkyWay
         {
             var line = new GameObject("Orbit").AddComponent<LineRenderer>();
             line.transform.SetParent(transform, false);
-            const int N = 96;
+            // 256 segments: at the exhibit's close-up framings a 96-gon reads
+            // as a polygon, not an orbit.
+            const int N = 256;
             line.positionCount = N;
+            line.numCornerVertices = 4;
             line.loop = true;
             line.useWorldSpace = false;
             line.widthMultiplier = 0.00045f;

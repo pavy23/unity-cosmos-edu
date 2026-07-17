@@ -119,7 +119,7 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
---- !u!1 &794653113
+--- !u!1 &523289093
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -127,65 +127,16 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 794653115}
-  - component: {fileID: 794653114}
-  m_Layer: 0
-  m_Name: Post Processing
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &794653114
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 794653113}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 172515602e62fb746b5d573b38a5fe58, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Unity.RenderPipelines.Core.Runtime::UnityEngine.Rendering.Volume
-  m_IsGlobal: 1
-  priority: 0
-  blendDistance: 0
-  weight: 1
-  sharedProfile: {fileID: 0}
---- !u!4 &794653115
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 794653113}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &1690061912
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1690061922}
-  - component: {fileID: 1690061921}
-  - component: {fileID: 1690061920}
-  - component: {fileID: 1690061919}
-  - component: {fileID: 1690061918}
-  - component: {fileID: 1690061917}
-  - component: {fileID: 1690061916}
-  - component: {fileID: 1690061915}
-  - component: {fileID: 1690061914}
-  - component: {fileID: 1690061913}
+  - component: {fileID: 523289103}
+  - component: {fileID: 523289102}
+  - component: {fileID: 523289101}
+  - component: {fileID: 523289100}
+  - component: {fileID: 523289099}
+  - component: {fileID: 523289098}
+  - component: {fileID: 523289097}
+  - component: {fileID: 523289096}
+  - component: {fileID: 523289095}
+  - component: {fileID: 523289094}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -193,29 +144,30 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1690061913
+--- !u!114 &523289094
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1690061912}
+  m_GameObject: {fileID: 523289093}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 165ef170fb931034e9e3e59fdc1601bf, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MilkyWay.SolarSystemControls
-  orbit: {fileID: 1690061918}
-  tour: {fileID: 1690061917}
-  scaleTruth: {fileID: 1690061916}
-  audioScape: {fileID: 1690061914}
---- !u!114 &1690061914
+  orbit: {fileID: 523289099}
+  tour: {fileID: 523289098}
+  scaleTruth: {fileID: 523289097}
+  audioScape: {fileID: 523289095}
+  stage: {fileID: 546970099}
+--- !u!114 &523289095
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1690061912}
+  m_GameObject: {fileID: 523289093}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f85549c12a978a143aa2fe05b708d149, type: 3}
@@ -223,13 +175,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::MilkyWay.MilkyWayAudio
   volume: 0.2
   muted: 0
---- !u!82 &1690061915
+--- !u!82 &523289096
 AudioSource:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1690061912}
+  m_GameObject: {fileID: 523289093}
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
@@ -320,71 +272,71 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
---- !u!114 &1690061916
+--- !u!114 &523289097
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1690061912}
+  m_GameObject: {fileID: 523289093}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7aa3ad3aa72943c4e92cf9bacdbc109b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MilkyWay.ScaleTruth
   rig: {fileID: 0}
-  stage: {fileID: 2038595324}
-  orbit: {fileID: 1690061918}
+  stage: {fileID: 546970099}
+  orbit: {fileID: 523289099}
   blendDuration: 12
---- !u!114 &1690061917
+--- !u!114 &523289098
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1690061912}
+  m_GameObject: {fileID: 523289093}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 56c4386115dafa848b907c93a71ca1a6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MilkyWay.SolarSystemTour
-  orbit: {fileID: 1690061918}
+  orbit: {fileID: 523289099}
   stageRig: {fileID: 0}
-  stage: {fileID: 2038595324}
+  stage: {fileID: 546970099}
   toggleKeyLabel: F1
   glideDuration: 3.2
   tourMotionScale: 0.06
---- !u!114 &1690061918
+--- !u!114 &523289099
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1690061912}
+  m_GameObject: {fileID: 523289093}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 6ec39396e1b9dc14085bac636ee7bb98, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BlackHoleEffect.CinematicOrbit
-  target: {fileID: 2038595325}
+  target: {fileID: 546970100}
   orbitSpeed: 0.4
   bobAmplitude: 1.2
   bobPeriod: 52
---- !u!81 &1690061919
+--- !u!81 &523289100
 AudioListener:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1690061912}
+  m_GameObject: {fileID: 523289093}
   m_Enabled: 1
---- !u!114 &1690061920
+--- !u!114 &523289101
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1690061912}
+  m_GameObject: {fileID: 523289093}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a79441f348de89743a2939f4d699eac1, type: 3}
@@ -422,13 +374,13 @@ MonoBehaviour:
     m_VarianceClampScale: 0.9
     m_ContrastAdaptiveSharpening: 0
   m_Version: 2
---- !u!20 &1690061921
+--- !u!20 &523289102
 Camera:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1690061912}
+  m_GameObject: {fileID: 523289093}
   m_Enabled: 1
   serializedVersion: 2
   m_ClearFlags: 1
@@ -473,13 +425,13 @@ Camera:
   m_OcclusionCulling: 1
   m_StereoConvergence: 10
   m_StereoSeparation: 0.022
---- !u!4 &1690061922
+--- !u!4 &523289103
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1690061912}
+  m_GameObject: {fileID: 523289093}
   serializedVersion: 2
   m_LocalRotation: {x: 0.20577289, y: 0, z: 0, w: 0.9785998}
   m_LocalPosition: {x: 0, y: 55, z: -125}
@@ -488,7 +440,7 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &2038595323
+--- !u!1 &546970098
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -496,8 +448,8 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 2038595325}
-  - component: {fileID: 2038595324}
+  - component: {fileID: 546970100}
+  - component: {fileID: 546970099}
   m_Layer: 0
   m_Name: Solar System Stage
   m_TagString: Untagged
@@ -505,13 +457,13 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &2038595324
+--- !u!114 &546970099
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2038595323}
+  m_GameObject: {fileID: 546970098}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: cee9659bfe41d944ca35ee32e0b197de, type: 3}
@@ -519,13 +471,62 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::MilkyWay.SolarSystemStage
   rigScale: 1000
   ambientMotionScale: 0.25
---- !u!4 &2038595325
+--- !u!4 &546970100
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2038595323}
+  m_GameObject: {fileID: 546970098}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1285184599
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1285184601}
+  - component: {fileID: 1285184600}
+  m_Layer: 0
+  m_Name: Post Processing
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1285184600
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1285184599}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 172515602e62fb746b5d573b38a5fe58, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.RenderPipelines.Core.Runtime::UnityEngine.Rendering.Volume
+  m_IsGlobal: 1
+  priority: 0
+  blendDistance: 0
+  weight: 1
+  sharedProfile: {fileID: 0}
+--- !u!4 &1285184601
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1285184599}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
@@ -538,6 +539,6 @@ Transform:
 SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
-  - {fileID: 2038595325}
-  - {fileID: 1690061922}
-  - {fileID: 794653115}
+  - {fileID: 546970100}
+  - {fileID: 523289103}
+  - {fileID: 1285184601}

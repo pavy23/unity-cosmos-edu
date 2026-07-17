@@ -100,7 +100,16 @@ namespace MilkyWay
             IsPlaying = false;
         }
 
-        static float Narrate(int i) => NarrationManager.Instance.Play("mw_web_" + i);
+        // A beat may only fire once its predecessor's voice has finished —
+        // thresholds alone cut the longer (ja, ko) lines mid-sentence.
+        float narrEnd;
+        bool NarrationDone => Time.time >= narrEnd;
+        float Narrate(int i)
+        {
+            float len = NarrationManager.Instance.Play("mw_web_" + i);
+            narrEnd = Time.time + len + 0.4f;
+            return len;
+        }
 
         IEnumerator Run()
         {
@@ -161,7 +170,7 @@ namespace MilkyWay
                 // Impostors fade in as we leave — no pop at the start.
                 Atmosphere(u, Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.02f, 0.16f, u)));
 
-                if (stage == 0 && u > 0.23f)
+                if (stage == 0 && u > 0.23f && NarrationDone)
                 {
                     stage = 1; Narrate(1);
                     Caption(Loc.T(
@@ -170,7 +179,7 @@ namespace MilkyWay
                         "ほら — アンドロメダ銀河です。私たちの銀河とアンドロメダ、そして数十の\n小さな銀河が「局所銀河群」という家族をつくっています。",
                         "看——仙女座星系。我们的银河系、仙女座，以及数十个小星系，\n组成一个叫做'本星系群'的家族。"));
                 }
-                else if (stage == 1 && u > 0.60f)
+                else if (stage == 1 && u > 0.60f && NarrationDone)
                 {
                     stage = 2; Narrate(2);
                     Caption(Loc.T(
@@ -179,7 +188,7 @@ namespace MilkyWay
                         "銀河が集まってきます — おとめ座銀河団。千あまりの銀河が互いの重力で\n結ばれています。局所銀河群は、この大都市の郊外の村です。",
                         "星系聚集起来——室女座星系团，上千个星系被彼此的引力束缚。\n我们的本星系群，只是这座大城市郊外的小村庄。"));
                 }
-                else if (stage == 2 && u > 0.83f)
+                else if (stage == 2 && u > 0.83f && NarrationDone)
                 {
                     stage = 3; Narrate(3);
                     Caption(Loc.T(
@@ -192,6 +201,11 @@ namespace MilkyWay
             }
 
             // ---- Deep-field hold --------------------------------------------
+            while (!NarrationDone)
+            {
+                transform.RotateAround(Vector3.zero, Vector3.up, 0.25f * Time.deltaTime);
+                yield return null;
+            }
             float len4 = Narrate(4);
             Caption(Loc.T(
                 "이 화면에서 빛나는 점 하나하나가 — 별이 아니라 은하입니다. 각각 수천억 개의\n별을 품고서요. 관측 가능한 우주에 이런 은하가 약 2조 개 있습니다. 이제 집으로 돌아갑니다.",

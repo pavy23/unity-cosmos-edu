@@ -37,6 +37,6 @@ Material:
     - _TidalAmount: 0
     - _YoungStrength: 1
     m_Colors:
-    - _TidalDir: {r: 1, g: 0, b: 0, a: 0}
+    - _TidalDir: {r: -0.4538399, g: 0, b: -0.8910832, a: 0}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

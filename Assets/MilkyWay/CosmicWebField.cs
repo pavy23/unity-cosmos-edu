@@ -37,7 +37,7 @@ namespace MilkyWay
         Material mat;
         bool built;
 
-        struct G { public Vector3 p; public float size; public Color tint; }
+        struct G { public Vector3 p; public float size; public Color tint; public float minPx; }
 
         static readonly Color SpiralTint = new Color(0.70f, 0.76f, 1.00f);
         static readonly Color EllipTint = new Color(1.00f, 0.82f, 0.62f);
@@ -59,7 +59,11 @@ namespace MilkyWay
             var list = new List<G>(webCount + 4000);
 
             AddLocalGroup(rng, list);
-            AddCluster(rng, list, VirgoPos, 1100f, 1300, 45f, 0.75f); // Virgo, elliptical-rich, M87-sized heart
+            // Virgo: elliptical-rich, sized so the flyby reads as a WALL of
+            // resolved galaxies (JWST-cluster look), not a star swarm — at
+            // ~22,000 kpc viewing distance the members need tens of kpc each,
+            // and cluster cores really do host such giants.
+            AddCluster(rng, list, VirgoPos, 1100f, 1600, 75f, 0.75f);
             AddWeb(rng, list);
 
             BakeMesh(list);
@@ -75,17 +79,17 @@ namespace MilkyWay
         {
             // The two big spirals' companions and the dwarf swarm. M31 is
             // authored slightly larger than the Milky Way — as observed.
-            list.Add(new G { p = M31Pos, size = 46f, tint = SpiralTint * 1.15f });
-            list.Add(new G { p = M31Pos + new Vector3(120f, -60f, 140f), size = 18f, tint = SpiralTint }); // M33
-            list.Add(new G { p = new Vector3(28f, -22f, 34f), size = 9f, tint = IrregTint });   // LMC
-            list.Add(new G { p = new Vector3(38f, -30f, 22f), size = 6f, tint = IrregTint });   // SMC
+            list.Add(new G { p = M31Pos, size = 46f, tint = SpiralTint * 1.15f, minPx = 8f });
+            list.Add(new G { p = M31Pos + new Vector3(120f, -60f, 140f), size = 18f, tint = SpiralTint, minPx = 6f }); // M33
+            list.Add(new G { p = new Vector3(28f, -22f, 34f), size = 9f, tint = IrregTint, minPx = 5f });   // LMC
+            list.Add(new G { p = new Vector3(38f, -30f, 22f), size = 6f, tint = IrregTint, minPx = 5f });   // SMC
             for (int i = 0; i < 34; i++)
             {
                 // Dwarf spheroidals: faint, tiny, everywhere.
                 Vector3 dir = RandDir(rng);
                 float d = 60f + 700f * (float)rng.NextDouble();
                 list.Add(new G { p = dir * d, size = 2f + 3f * (float)rng.NextDouble(),
-                                 tint = EllipTint * 0.35f });
+                                 tint = EllipTint * 0.35f, minPx = 3.5f });
             }
         }
 
@@ -93,7 +97,7 @@ namespace MilkyWay
                         int members, float bcgSize, float ellipFraction)
         {
             // Brightest cluster galaxy: one giant elliptical in the middle.
-            list.Add(new G { p = centre, size = bcgSize, tint = EllipTint * 1.2f });
+            list.Add(new G { p = centre, size = bcgSize, tint = EllipTint * 1.35f, minPx = 10f });
             for (int i = 0; i < members; i++)
             {
                 Vector3 p = centre + Gaussian3(rng) * sigma;
@@ -101,8 +105,11 @@ namespace MilkyWay
                 list.Add(new G
                 {
                     p = p,
-                    size = 6f + 22f * Mathf.Pow((float)rng.NextDouble(), 2.2f),
-                    tint = (ellip ? EllipTint : SpiralTint) * (0.55f + 0.5f * (float)rng.NextDouble()),
+                    // A JWST cluster frame is a size hierarchy: many mid-size
+                    // members and a few giants, not a uniform dust of points.
+                    size = 9f + 42f * Mathf.Pow((float)rng.NextDouble(), 1.8f),
+                    tint = (ellip ? EllipTint : SpiralTint) * (0.65f + 0.6f * (float)rng.NextDouble()),
+                    minPx = 4.5f + 4f * (float)rng.NextDouble(),
                 });
             }
         }
@@ -131,6 +138,7 @@ namespace MilkyWay
                     size = 8f + 30f * Mathf.Pow((float)rng.NextDouble(), 2f),
                     tint = (ellip ? EllipTint : rnd > 0.9f ? IrregTint : SpiralTint)
                          * (0.5f + 0.6f * (float)rng.NextDouble()),
+                    minPx = 2.2f,
                 });
                 placed++;
 
@@ -154,6 +162,7 @@ namespace MilkyWay
             var cols = new Color[n * 4];
             var corners = new Vector2[n * 4];
             var sizeRand = new Vector2[n * 4];
+            var pixelFloor = new Vector2[n * 4];
             var tris = new int[n * 6];
 
             for (int i = 0; i < n; i++)
@@ -167,6 +176,7 @@ namespace MilkyWay
                     cols[v] = g.tint;
                     corners[v] = new Vector2((k & 1) * 2 - 1, (k >> 1) * 2 - 1);
                     sizeRand[v] = new Vector2(g.size, rand);
+                    pixelFloor[v] = new Vector2(Mathf.Max(g.minPx, 1.5f), 0f);
                 }
                 int t = i * 6, b = i * 4;
                 tris[t] = b; tris[t + 1] = b + 2; tris[t + 2] = b + 1;
@@ -178,6 +188,7 @@ namespace MilkyWay
             mesh.colors = cols;
             mesh.SetUVs(0, corners);
             mesh.SetUVs(1, sizeRand);
+            mesh.SetUVs(2, pixelFloor);
             mesh.triangles = tris;
             mesh.bounds = new Bounds(Vector3.zero, Vector3.one * 400000f);
             GetComponent<MeshFilter>().sharedMesh = mesh;

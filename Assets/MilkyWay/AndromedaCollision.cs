@@ -124,7 +124,16 @@ namespace MilkyWay
             controller.Apply(); // brightness/bulge/dust back from the fields
         }
 
-        static float Narrate(int i) => NarrationManager.Instance.Play("mw_m31_" + i);
+        // A beat may only fire once its predecessor's voice has finished —
+        // thresholds alone would cut re-recorded longer lines mid-sentence.
+        float narrEnd;
+        bool NarrationDone => Time.time >= narrEnd;
+        float Narrate(int i)
+        {
+            float len = NarrationManager.Instance.Play("mw_m31_" + i);
+            narrEnd = Time.time + len + 0.4f;
+            return len;
+        }
 
         IEnumerator Run()
         {
@@ -169,7 +178,7 @@ namespace MilkyWay
                 Tides(u, sep);
                 YearLine(u);
 
-                if (stage == 0 && u > 0.30f)
+                if (stage == 0 && u > 0.30f && NarrationDone)
                 {
                     stage = 1; Narrate(1);
                     Caption(Loc.T(
@@ -178,7 +187,7 @@ namespace MilkyWay
                         "最初の遭遇 — 二つの銀河はすれ違いざま、潮汐力が互いの星を長い尾に引き出します。",
                         "第一次交会——两个星系擦肩而过，潮汐力把彼此的恒星拉成长长的尾巴。"));
                 }
-                else if (stage == 1 && u > 0.52f)
+                else if (stage == 1 && u > 0.52f && NarrationDone)
                 {
                     stage = 2; Narrate(2);
                     Caption(Loc.T(
@@ -187,7 +196,7 @@ namespace MilkyWay
                         "互いに離れようとしますが — 見えないダークマターハローの重力が逃がしません。",
                         "它们试图挣脱彼此——但看不见的暗物质晕的引力不肯放手。"));
                 }
-                else if (stage == 2 && u > 0.80f)
+                else if (stage == 2 && u > 0.80f && NarrationDone)
                 {
                     stage = 3; Narrate(3);
                     Caption(Loc.T(
@@ -200,6 +209,11 @@ namespace MilkyWay
             }
 
             // ---- epilogue: the merged elliptical ------------------------------
+            while (!NarrationDone)
+            {
+                PlaceCamera(0f, Time.deltaTime);
+                yield return null;
+            }
             len = Narrate(4);
             Caption(Loc.T(
                 "별들 사이는 너무나 넓어서, 별끼리 부딪히는 일은 거의 없습니다.\n태양계는 무사히 — 다만 새 은하의 다른 자리로 옮겨질 것입니다.",

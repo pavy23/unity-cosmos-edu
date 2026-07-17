@@ -101,7 +101,16 @@ namespace MilkyWay
             if (orbit != null) orbit.enabled = true;
         }
 
-        static float Narrate(int i) => NarrationManager.Instance.Play("mw_sgr_" + i);
+        // A beat may only fire once its predecessor's voice has finished —
+        // thresholds alone cut the longer (ja, ko) lines mid-sentence.
+        float narrEnd;
+        bool NarrationDone => Time.time >= narrEnd;
+        float Narrate(int i)
+        {
+            float len = NarrationManager.Instance.Play("mw_sgr_" + i);
+            narrEnd = Time.time + len + 0.4f;
+            return len;
+        }
 
         IEnumerator Run()
         {
@@ -152,7 +161,7 @@ namespace MilkyWay
                 controller.starBrightness = Mathf.Lerp(savedStarBrightness, 0.7f, u);
                 controller.Apply();
 
-                if (stage == 0 && u > 0.52f)
+                if (stage == 0 && u > 0.52f && NarrationDone)
                 {
                     stage = 1; Narrate(1);
                     Caption(Loc.T(NarrationLines[1], NarrationLinesEn[1], NarrationLinesJa[1], NarrationLinesZh[1]));
@@ -161,6 +170,11 @@ namespace MilkyWay
             }
 
             // Final beat at the core: the dust wall, the radio image, the exit.
+            while (!NarrationDone)
+            {
+                transform.RotateAround(Vector3.zero, Vector3.up, 1.2f * Time.deltaTime);
+                yield return null;
+            }
             float len2 = Narrate(2);
             Caption(Loc.T(NarrationLines[2], NarrationLinesEn[2], NarrationLinesJa[2], NarrationLinesZh[2]));
             for (float t = 0f, dur = Mathf.Max(6f, len2 - 1.5f); t < dur; t += Time.deltaTime)

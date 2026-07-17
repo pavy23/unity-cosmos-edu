@@ -281,6 +281,7 @@ namespace MilkyWay
             var cols = new Color[n * 4];
             var corners = new List<Vector2>(n * 4);
             var sizeRand = new List<Vector2>(n * 4);
+            var pixelFloor = new List<Vector2>(n * 4);
             var tris = new int[n * 6];
             for (int i = 0; i < n; i++)
             {
@@ -291,6 +292,7 @@ namespace MilkyWay
                     cols[i * 4 + k] = list[i].tint;
                     corners.Add(new Vector2((k & 1) * 2 - 1, (k >> 1) * 2 - 1));
                     sizeRand.Add(new Vector2(list[i].size, rand));
+                    pixelFloor.Add(new Vector2(2.5f, 0f)); // shader's per-galaxy floor
                 }
                 int t = i * 6, b = i * 4;
                 tris[t] = b; tris[t + 1] = b + 2; tris[t + 2] = b + 1;
@@ -301,6 +303,7 @@ namespace MilkyWay
             dwarfMesh.colors = cols;
             dwarfMesh.SetUVs(0, corners);
             dwarfMesh.SetUVs(1, sizeRand);
+            dwarfMesh.SetUVs(2, pixelFloor);
             dwarfMesh.triangles = tris;
             dwarfMesh.bounds = new Bounds(HallCentre, Vector3.one * 260f);
 

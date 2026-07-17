@@ -80,6 +80,7 @@ namespace MilkyWay.Editor
             controls.tour = tour;
             controls.scaleTruth = truth;
             controls.audioScape = audio;
+            controls.stage = stage;
 
             SetupPostProcessing();
 

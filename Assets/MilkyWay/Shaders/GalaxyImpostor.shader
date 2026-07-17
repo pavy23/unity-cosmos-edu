@@ -41,6 +41,9 @@ Shader "MilkyWay/GalaxyImpostor"
                 float4 color : COLOR;           // type tint
                 float2 corner : TEXCOORD0;      // quad corner in [-1, 1]
                 float2 sizeRand : TEXCOORD1;    // x = world size (kpc), y = per-galaxy random
+                float2 pixelFloor : TEXCOORD2;  // x = per-galaxy minimum pixels: cluster
+                                                // members stay RESOLVED fuzzy galaxies
+                                                // (the JWST read) while the web stays points
             };
 
             struct Varyings
@@ -69,7 +72,8 @@ Shader "MilkyWay/GalaxyImpostor"
                 // while looking fine in nothing at all.
                 float m11 = max(abs(UNITY_MATRIX_P._m11), 1e-3); // cot(fov/2)
                 float worldPerPixel = dist * 2.0 / (m11 * _ScreenParams.y);
-                float sizeDraw = max(sizeReal, _MinPixels * worldPerPixel);
+                float minPixels = max(v.pixelFloor.x, 0.5) * _MinPixels * 0.5;
+                float sizeDraw = max(sizeReal, minPixels * worldPerPixel);
                 float energy = (sizeReal * sizeReal) / (sizeDraw * sizeDraw);
 
                 float4 viewPos = mul(UNITY_MATRIX_V, float4(centerWS, 1.0));

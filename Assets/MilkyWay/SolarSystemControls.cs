@@ -22,6 +22,10 @@ namespace MilkyWay
         public SolarSystemTour tour;
         public ScaleTruth scaleTruth;
         public MilkyWayAudio audioScape;
+        public SolarSystemStage stage;
+
+        static readonly string[] PickableBodies =
+            { "Sun", "Mercury", "Venus", "Earth", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune" };
 
         bool AnyPlaying =>
             (tour != null && tour.Running) ||
@@ -44,11 +48,55 @@ namespace MilkyWay
             ReadHotkeys();
             if (!AnyPlaying)
                 ReadMouse();
+            // Clicking a planet zooms to its tour stop — from free flight OR
+            // mid-tour (jumping between stops). Not during the scale truth.
+            if (scaleTruth == null || !scaleTruth.IsPlaying)
+                ReadPlanetClick();
             if (helpBar != null)
             {
                 helpBar.SetActive(showHelp && !AnyPlaying);
                 if (helpLocVersion != Loc.Version) { helpLocVersion = Loc.Version; UpdateHelpText(); }
             }
+        }
+
+        /// <summary>Screen-space picking — the rig's bodies carry no
+        /// colliders, so we compare the click against each body's projected
+        /// position and apparent radius (plus finger-friendly padding).</summary>
+        void ReadPlanetClick()
+        {
+            Vector2 click;
+#if ENABLE_INPUT_SYSTEM
+            var mouse = Mouse.current;
+            if (mouse == null || !mouse.leftButton.wasPressedThisFrame) return;
+            click = mouse.position.ReadValue();
+#else
+            if (!Input.GetMouseButtonDown(0)) return;
+            click = Input.mousePosition;
+#endif
+            var rig = stage != null ? stage.Rig : null;
+            if (rig == null || tour == null) return;
+            var cam = GetComponent<Camera>();
+
+            string best = null;
+            float bestDist = float.MaxValue;
+            foreach (var name in PickableBodies)
+            {
+                var body = rig.GetBody(name);
+                if (body == null) continue;
+                Vector3 sp = cam.WorldToScreenPoint(body.position);
+                if (sp.z <= 0f) continue; // behind the camera
+                float radius = 0.5f;
+                foreach (var mr in body.GetComponentsInChildren<MeshRenderer>())
+                    radius = Mathf.Max(radius, mr.bounds.extents.magnitude * 0.577f);
+                float projected = radius / sp.z * (Screen.height * 0.5f) /
+                                  Mathf.Tan(cam.fieldOfView * 0.5f * Mathf.Deg2Rad);
+                float hitRadius = Mathf.Clamp(projected * 1.5f, 22f, 240f);
+                float d = Vector2.Distance(click, new Vector2(sp.x, sp.y));
+                if (d < hitRadius && d < bestDist) { bestDist = d; best = name; }
+            }
+            if (best == null) return;
+            int index = SolarSystemTour.StopIndexOf(best);
+            if (index >= 0) tour.StartTourAt(index);
         }
 
         void ReadHotkeys()
@@ -173,10 +221,10 @@ namespace MilkyWay
         {
             if (help == null) return;
             help.text = Loc.T(
-                Key("F1") + "행성 투어(N/B)   " + Key("F2") + "진짜 크기   " + Key("F9") + "우리은하 전시로   " + Key("우클릭") + "회전   " + Key("휠") + "줌   " + Key("M") + "소리   " + Key("K") + "언어   " + Key("H") + "도움말",
-                Key("F1") + "planet tour(N/B)   " + Key("F2") + "the true scale   " + Key("F9") + "to the Milky Way   " + Key("R-drag") + "orbit   " + Key("wheel") + "zoom   " + Key("M") + "sound   " + Key("K") + "language   " + Key("H") + "help",
-                Key("F1") + "惑星ツアー(N/B)   " + Key("F2") + "本当の縮尺   " + Key("F9") + "天の川展示へ   " + Key("右ドラッグ") + "回転   " + Key("ホイール") + "ズーム   " + Key("M") + "音   " + Key("K") + "言語   " + Key("H") + "ヘルプ",
-                Key("F1") + "行星导览(N/B)   " + Key("F2") + "真实比例   " + Key("F9") + "去银河系展区   " + Key("右键拖动") + "旋转   " + Key("滚轮") + "缩放   " + Key("M") + "声音   " + Key("K") + "语言   " + Key("H") + "帮助");
+                Key("클릭") + "행성 줌인   " + Key("F1") + "행성 투어(N/B)   " + Key("F2") + "진짜 크기   " + Key("F9") + "우리은하 전시로   " + Key("우클릭") + "회전   " + Key("휠") + "줌   " + Key("M") + "소리   " + Key("K") + "언어   " + Key("H") + "도움말",
+                Key("Click") + "zoom to planet   " + Key("F1") + "planet tour(N/B)   " + Key("F2") + "the true scale   " + Key("F9") + "to the Milky Way   " + Key("R-drag") + "orbit   " + Key("wheel") + "zoom   " + Key("M") + "sound   " + Key("K") + "language   " + Key("H") + "help",
+                Key("クリック") + "惑星ズーム   " + Key("F1") + "惑星ツアー(N/B)   " + Key("F2") + "本当の縮尺   " + Key("F9") + "天の川展示へ   " + Key("右ドラッグ") + "回転   " + Key("ホイール") + "ズーム   " + Key("M") + "音   " + Key("K") + "言語   " + Key("H") + "ヘルプ",
+                Key("点击") + "缩放到行星   " + Key("F1") + "行星导览(N/B)   " + Key("F2") + "真实比例   " + Key("F9") + "去银河系展区   " + Key("右键拖动") + "旋转   " + Key("滚轮") + "缩放   " + Key("M") + "声音   " + Key("K") + "语言   " + Key("H") + "帮助");
         }
     }
 }

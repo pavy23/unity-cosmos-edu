@@ -30,11 +30,12 @@ namespace MilkyWay
         Vector3 savedPos;
         Quaternion savedRot;
         float savedFov, savedBrightness, savedStarBrightness;
+        float savedDust, savedClump;
         Text caption;
         RectTransform captionPanel;
         Button stopButton;
         GameObject stage;          // ground + ridge + airglow, faded as one
-        Material groundMat, ridgeMat, glowMat;
+        Material groundMat, ridgeMat, glowMat, propMat;
 
         public void Begin()
         {
@@ -79,10 +80,21 @@ namespace MilkyWay
         {
             controller.brightness = savedBrightness;
             controller.starBrightness = savedStarBrightness;
+            if (savedDust > 0f) controller.dustStrength = savedDust;
+            if (savedClump > 0f) controller.clumpiness = savedClump;
             controller.Apply();
         }
 
-        static float Narrate(int i) => NarrationManager.Instance.Play("mw_sky_" + i);
+        // A beat may only fire once its predecessor's voice has finished —
+        // thresholds alone cut the longer (ja, ko) lines mid-sentence.
+        float narrEnd;
+        bool NarrationDone => Time.time >= narrEnd;
+        float Narrate(int i)
+        {
+            float len = NarrationManager.Instance.Play("mw_sky_" + i);
+            narrEnd = Time.time + len + 0.4f;
+            return len;
+        }
 
         IEnumerator Run()
         {
@@ -99,18 +111,33 @@ namespace MilkyWay
             Vector3 sun = controller.SunPositionWorld;
             Vector3 toCentre = (Vector3.zero - sun).normalized;
 
+            // The observer's ground is NOT parallel to the galactic plane —
+            // that alignment turns the band into 360° of horizon glow. Tilt
+            // the whole stage around the centre line (real photographs'
+            // geometry: Sagittarius low on the horizon, the band ARCHING
+            // diagonally overhead). ~55° reads like a mid-latitude summer sky.
+            Quaternion tilt = Quaternion.AngleAxis(55f, toCentre);
+            Vector3 up = tilt * Vector3.up;
+
             // ---- Stage 0: a night sky. Dark-adapted, horizon below. --------
             controller.brightness = 0.85f;
             controller.starBrightness = 0.75f;
+            // The Great Rift is dust: push extinction and clumping up while
+            // we stand on the ground, so the band is visibly SPLIT and
+            // mottled the way the real sky is. Restored during liftoff.
+            savedDust = controller.dustStrength;
+            savedClump = controller.clumpiness;
+            controller.dustStrength = savedDust * 1.5f;
+            controller.clumpiness = Mathf.Min(1.5f, savedClump * 1.35f);
             controller.Apply();
             if (cam != null) cam.fieldOfView = 58f;
-            EnsureGround(sun);
+            EnsureGround(sun, tilt);
 
             transform.position = sun;
             // Start 60° away from the centre, gazing slightly above the horizon.
             Quaternion fromRot = Quaternion.LookRotation(
-                Quaternion.AngleAxis(60f, Vector3.up) * toCentre + Vector3.up * 0.12f, Vector3.up);
-            Quaternion toRot = Quaternion.LookRotation(toCentre + Vector3.up * 0.10f, Vector3.up);
+                Quaternion.AngleAxis(60f, up) * toCentre + up * 0.12f, up);
+            Quaternion toRot = Quaternion.LookRotation(toCentre + up * 0.10f, up);
             transform.rotation = fromRot;
 
             float len = Narrate(0);
@@ -150,13 +177,20 @@ namespace MilkyWay
             {
                 float u = Mathf.Clamp01(t / liftDuration);
                 float h = Mathf.Exp(Mathf.Lerp(Mathf.Log(h0), Mathf.Log(h1), u));
-                // Drift slightly outward while rising so the whole disk fits.
+                // Rise along the STAGE's up (world-up drifts in as height
+                // makes the tilt meaningless), drifting outward so the whole
+                // disk fits.
+                Vector3 riseUp = Vector3.Slerp(up, Vector3.up, Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.25f, 0.7f, u)));
                 float drift = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.3f, 1f, u)) * 9f;
-                transform.position = sun + Vector3.up * h + new Vector3(0.35f, 0f, 0.2f).normalized * drift;
+                transform.position = sun + riseUp * h + new Vector3(0.35f, 0f, 0.2f).normalized * drift;
                 // Gaze: from the horizon-line of the centre up... to looking DOWN
                 // at the centre as we gain height. LookAt handles it continuously.
                 transform.LookAt(Vector3.Lerp(sun + toCentre * 8f, Vector3.zero,
-                    Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.15f, 0.6f, u))));
+                    Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.15f, 0.6f, u))), riseUp);
+                // The ground-stage dust boost eases back out with height.
+                float dustEase = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.15f, 0.55f, u));
+                controller.dustStrength = Mathf.Lerp(savedDust * 1.5f, savedDust, dustEase);
+                controller.clumpiness = Mathf.Lerp(Mathf.Min(1.5f, savedClump * 1.35f), savedClump, dustEase);
 
                 // The night stage fades away in the first quarter of the climb.
                 if (stage != null)
@@ -173,7 +207,7 @@ namespace MilkyWay
                 controller.Apply();
                 if (cam != null) cam.fieldOfView = Mathf.Lerp(58f, 40f, Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.25f, 0.75f, u)));
 
-                if (stage == 0 && u > 0.55f)
+                if (stage == 0 && u > 0.55f && NarrationDone)
                 {
                     stage = 1; len = Narrate(3);
                     Caption(Loc.T(
@@ -186,7 +220,7 @@ namespace MilkyWay
             }
 
             // Hold the reveal, then hand back to the ambient orbit.
-            for (float t = 0f; t < 5f; t += Time.deltaTime) yield return null;
+            for (float t = 0f; t < 5f || !NarrationDone; t += Time.deltaTime) yield return null;
             RestoreExposure();
             Finish();
         }
@@ -199,11 +233,12 @@ namespace MilkyWay
         /// cues that read as "standing on Earth at night" instead of "floating
         /// in space next to a black disk". Pure staging; fades out at liftoff.
         /// </summary>
-        void EnsureGround(Vector3 sun)
+        void EnsureGround(Vector3 sun, Quaternion tilt)
         {
             if (stage != null) return;
             stage = new GameObject("Night Stage (staging)");
             stage.transform.position = sun;
+            stage.transform.rotation = tilt; // ground plane tilted off the galactic plane
 
             var sprite = Shader.Find("Sprites/Default"); // vertex colours + alpha, draws fine in URP
 
@@ -237,6 +272,87 @@ namespace MilkyWay
                 topOf: a => 0.06f,
                 bottomCol: new Color(0.09f, 0.14f, 0.24f, 0.14f),
                 topCol: new Color(0.09f, 0.14f, 0.24f, 0f));
+
+            BuildForegroundProps(sprite, sun);
+        }
+
+        // ---- foreground silhouettes: the people this sky belongs to ----
+        // A parent and child hand in hand, their dog, a house, a few trees —
+        // the classic night-photo foreground, built from primitives in the
+        // same near-black as the ridge. Scale: the eye stands 0.012 units
+        // above the ground, so 1 unit ≈ 140 m; an adult is ~0.012.
+        void BuildForegroundProps(Shader sprite, Vector3 sun)
+        {
+            propMat = new Material(sprite) { renderQueue = 3103 };
+            propMat.color = new Color(0.004f, 0.005f, 0.009f, 1f);
+
+            Vector3 toCentre = -sun; toCentre.y = 0f; toCentre.Normalize();
+            float groundY = -0.012f;
+
+            // Position helper: azimuth degrees off the galactic-centre line.
+            Vector3 At(float azDeg, float r) =>
+                Quaternion.AngleAxis(azDeg, Vector3.up) * toCentre * r + Vector3.up * groundY;
+
+            Transform P(PrimitiveType type, Vector3 pos, Vector3 scale, Quaternion? rot = null)
+            {
+                var go = GameObject.CreatePrimitive(type);
+                Object.Destroy(go.GetComponent<Collider>());
+                go.transform.SetParent(stage.transform, false);
+                go.transform.localPosition = pos;
+                go.transform.localScale = scale;
+                if (rot.HasValue) go.transform.localRotation = rot.Value;
+                go.GetComponent<MeshRenderer>().sharedMaterial = propMat;
+                go.GetComponent<MeshRenderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                return go.transform;
+            }
+
+            // The family, 12 m out, just beside the direction we end up
+            // facing — they watch the centre with us.
+            Vector3 adultPos = At(13f, 0.085f);
+            P(PrimitiveType.Capsule, adultPos + Vector3.up * 0.0055f, new Vector3(0.0034f, 0.0042f, 0.0034f)); // body
+            P(PrimitiveType.Sphere, adultPos + Vector3.up * 0.0112f, Vector3.one * 0.0036f);                  // head
+            Vector3 childPos = At(16.5f, 0.083f);
+            P(PrimitiveType.Capsule, childPos + Vector3.up * 0.0032f, new Vector3(0.0026f, 0.0026f, 0.0026f));
+            P(PrimitiveType.Sphere, childPos + Vector3.up * 0.0068f, Vector3.one * 0.0028f);
+            // Held hands: one thin bar between the two silhouettes.
+            Vector3 handA = adultPos + Vector3.up * 0.0052f;
+            Vector3 handB = childPos + Vector3.up * 0.0042f;
+            P(PrimitiveType.Cylinder, (handA + handB) * 0.5f,
+              new Vector3(0.0007f, Vector3.Distance(handA, handB) * 0.5f, 0.0007f),
+              Quaternion.FromToRotation(Vector3.up, handB - handA));
+
+            // The dog, sitting a step ahead of the child.
+            Vector3 dogPos = At(19f, 0.079f);
+            P(PrimitiveType.Capsule, dogPos + Vector3.up * 0.0018f, new Vector3(0.0014f, 0.0016f, 0.0014f),
+              Quaternion.Euler(70f, 0f, 0f));                                                  // body, leaning back on haunches
+            P(PrimitiveType.Sphere, dogPos + Vector3.up * 0.0036f + Quaternion.AngleAxis(19f, Vector3.up) * toCentre * 0.0012f,
+              Vector3.one * 0.0018f);                                                          // head
+            P(PrimitiveType.Capsule, dogPos + Vector3.up * 0.0044f, new Vector3(0.0005f, 0.0009f, 0.0005f),
+              Quaternion.Euler(0f, 0f, 24f));                                                  // an ear
+
+            // The house, off to the side: box, gable roof, chimney, 30 m out.
+            Vector3 housePos = At(-42f, 0.21f);
+            P(PrimitiveType.Cube, housePos + Vector3.up * 0.009f, new Vector3(0.030f, 0.018f, 0.020f));
+            P(PrimitiveType.Cube, housePos + Vector3.up * 0.021f, new Vector3(0.023f, 0.010f, 0.0145f),
+              Quaternion.Euler(0f, 0f, 45f));
+            P(PrimitiveType.Cube, housePos + Vector3.up * 0.026f + Vector3.right * 0.008f,
+              new Vector3(0.004f, 0.008f, 0.004f));
+
+            // A few trees, both sides, varied heights — spheres on a trunk
+            // read as broadleaf silhouettes at night.
+            void Tree(float az, float r, float s)
+            {
+                Vector3 basePos = At(az, r);
+                P(PrimitiveType.Cylinder, basePos + Vector3.up * 0.006f * s, new Vector3(0.0016f * s, 0.006f * s, 0.0016f * s));
+                P(PrimitiveType.Sphere, basePos + Vector3.up * 0.0135f * s, Vector3.one * 0.012f * s);
+                P(PrimitiveType.Sphere, basePos + Vector3.up * 0.019f * s, Vector3.one * 0.008f * s);
+                P(PrimitiveType.Sphere, basePos + (Vector3.up * 0.012f + Vector3.forward * 0.005f) * s, Vector3.one * 0.008f * s);
+            }
+            Tree(-56f, 0.16f, 1.0f);
+            Tree(-30f, 0.28f, 1.5f);
+            Tree(36f, 0.22f, 1.2f);
+            Tree(62f, 0.13f, 0.8f);
+            Tree(6f, 0.34f, 1.6f);
         }
 
         /// <summary>Builds a cylindrical strip around the viewer whose top edge
@@ -279,6 +395,7 @@ namespace MilkyWay
 
         void FadeStage(float a)
         {
+            if (propMat != null) { var c = propMat.color; c.a = a; propMat.color = c; }
             if (groundMat != null) { var c = groundMat.color; c.a = a; groundMat.color = c; }
             if (ridgeMat != null) { var c = ridgeMat.color; c.a = a; ridgeMat.color = c; }
             if (glowMat != null) { var c = glowMat.color; c.a = a; glowMat.color = c; }
@@ -290,8 +407,9 @@ namespace MilkyWay
             if (groundMat != null) Object.Destroy(groundMat);
             if (ridgeMat != null) Object.Destroy(ridgeMat);
             if (glowMat != null) Object.Destroy(glowMat);
+            if (propMat != null) Object.Destroy(propMat);
             stage = null;
-            groundMat = null; ridgeMat = null; glowMat = null;
+            groundMat = null; ridgeMat = null; glowMat = null; propMat = null;
         }
 
         // ---------------- UI ----------------

@@ -86,7 +86,16 @@ namespace MilkyWay
 
         /// <summary>Plays mw_zoom_{i}; returns clip length (0 while the TTS
         /// clips are not generated yet — stages fall back to their minimums).</summary>
-        static float Narrate(int i) => NarrationManager.Instance.Play("mw_zoom_" + i);
+        // A beat may only fire once its predecessor's voice has finished —
+        // thresholds alone cut the longer (ja, ko) lines mid-sentence.
+        float narrEnd;
+        bool NarrationDone => Time.time >= narrEnd;
+        float Narrate(int i)
+        {
+            float len = NarrationManager.Instance.Play("mw_zoom_" + i);
+            narrEnd = Time.time + len + 0.4f;
+            return len;
+        }
 
         IEnumerator Run()
         {
@@ -154,7 +163,7 @@ namespace MilkyWay
                 if (cam != null) cam.fieldOfView = Mathf.Lerp(56f, 38f, Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.2f, 0.7f, u)));
 
                 // Captions swap at scale thresholds, not clock times.
-                if (stage == 0 && u > 0.06f)
+                if (stage == 0 && u > 0.06f && NarrationDone)
                 {
                     stage = 1; Narrate(1);
                     Caption(Loc.T(
@@ -163,7 +172,7 @@ namespace MilkyWay
                         "惑星がまず見えなくなり、やがて太陽も — 数千億の星のひとつになります。",
                         "行星先消失了，接着太阳也——成为数千亿颗恒星中的一颗。"));
                 }
-                else if (stage == 1 && u > 0.4f)
+                else if (stage == 1 && u > 0.4f && NarrationDone)
                 {
                     stage = 2; Narrate(2);
                     Caption(Loc.T(
@@ -172,7 +181,7 @@ namespace MilkyWay
                         "私たちは銀河中心から約2万6千光年、渦状腕のあいだの静かな場所に住んでいます。",
                         "我们住在距离银心约2.6万光年的地方，在旋臂之间一处安静的角落。"));
                 }
-                else if (stage == 2 && u > 0.74f)
+                else if (stage == 2 && u > 0.74f && NarrationDone)
                 {
                     stage = 3; Narrate(3);
                     EnsureMarker(sun);
@@ -188,7 +197,7 @@ namespace MilkyWay
             }
 
             // ---- Hold the overview while the closing line finishes ----------
-            for (float t = 0f; t < 6f; t += Time.deltaTime)
+            for (float t = 0f; t < 6f || !NarrationDone; t += Time.deltaTime)
             {
                 if (marker != null) PulseMarker(zoomDuration + t);
                 yield return null;
