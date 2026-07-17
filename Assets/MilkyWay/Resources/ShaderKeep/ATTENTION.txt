@@ -1,0 +1,5 @@
+These materials exist ONLY so their shaders survive player-build stripping.
+Every shader here is created at runtime via Shader.Find() and referenced by
+no scene or asset — without these keepers a clean build ships without them
+(pink or invisible galaxies, orbit lines, jets, photon trails).
+Do not delete; do not use these materials directly.
