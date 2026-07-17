@@ -21,14 +21,17 @@ namespace MilkyWay
         [Header("Light")]
         [Range(0f, 8f)] public float brightness = 2.2f;
         [Range(0f, 4f)] public float bulgeBoost = 0.9f;
-        [Range(0f, 3f)] public float hiiStrength = 1.0f;
-        [Range(0f, 3f)] public float youngStrength = 1.0f;
+        // Defaults re-graded 2026-07 against the ESO panorama the night-sky
+        // experience now opens with: heavier dust (the Great Rift), grainier
+        // clouds, less saturated blue/pink — the photograph is the reference.
+        [Range(0f, 3f)] public float hiiStrength = 0.8f;
+        [Range(0f, 3f)] public float youngStrength = 0.75f;
         [Range(0f, 6f)] public float starBrightness = 1.15f;
 
         [Header("Structure")]
-        [Range(0f, 6f)] public float dustStrength = 3.4f;
+        [Range(0f, 6f)] public float dustStrength = 4.2f;
         [Range(0.2f, 2.5f)] public float armWidth = 0.9f;
-        [Range(0f, 1.5f)] public float clumpiness = 0.85f;
+        [Range(0f, 1.5f)] public float clumpiness = 1.0f;
 
         [Header("Quality")]
         [Range(24, 160)] public int marchSteps = 64;

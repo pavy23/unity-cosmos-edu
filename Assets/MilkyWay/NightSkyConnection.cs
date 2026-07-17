@@ -30,7 +30,7 @@ namespace MilkyWay
         Vector3 savedPos;
         Quaternion savedRot;
         float savedFov, savedBrightness, savedStarBrightness;
-        float savedDust, savedClump;
+        float savedDust, savedClump, savedHii, savedYoung;
         Text caption;
         RectTransform captionPanel;
         Button stopButton;
@@ -49,7 +49,6 @@ namespace MilkyWay
         void Update()
         {
             if (!IsPlaying) return;
-            BillboardProps();
 #if ENABLE_INPUT_SYSTEM
             var kb = UnityEngine.InputSystem.Keyboard.current;
             if (kb != null && kb.escapeKey.wasPressedThisFrame) Abort();
@@ -86,6 +85,8 @@ namespace MilkyWay
             controller.starBrightness = savedStarBrightness;
             if (savedDust > 0f) controller.dustStrength = savedDust;
             if (savedClump > 0f) controller.clumpiness = savedClump;
+            if (savedHii > 0f) controller.hiiStrength = savedHii;
+            if (savedYoung > 0f) controller.youngStrength = savedYoung;
             controller.Apply();
         }
 
@@ -131,8 +132,14 @@ namespace MilkyWay
             // mottled the way the real sky is. Restored during liftoff.
             savedDust = controller.dustStrength;
             savedClump = controller.clumpiness;
+            savedHii = controller.hiiStrength;
+            savedYoung = controller.youngStrength;
             controller.dustStrength = savedDust * 1.5f;
             controller.clumpiness = Mathf.Min(1.5f, savedClump * 1.35f);
+            // The photograph shows NO pink knots and no blue arm glow from
+            // inside — mute both while grounded so the crossfade twins match.
+            controller.hiiStrength = savedHii * 0.3f;
+            controller.youngStrength = savedYoung * 0.6f;
             controller.Apply();
             if (cam != null) cam.fieldOfView = 58f;
             EnsureGround(sun, tilt);
@@ -191,10 +198,12 @@ namespace MilkyWay
                 // at the centre as we gain height. LookAt handles it continuously.
                 transform.LookAt(Vector3.Lerp(sun + toCentre * 8f, Vector3.zero,
                     Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.15f, 0.6f, u))), riseUp);
-                // The ground-stage dust boost eases back out with height.
+                // The ground-stage grade eases back out with height.
                 float dustEase = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.15f, 0.55f, u));
                 controller.dustStrength = Mathf.Lerp(savedDust * 1.5f, savedDust, dustEase);
                 controller.clumpiness = Mathf.Lerp(Mathf.Min(1.5f, savedClump * 1.35f), savedClump, dustEase);
+                controller.hiiStrength = Mathf.Lerp(savedHii * 0.3f, savedHii, dustEase);
+                controller.youngStrength = Mathf.Lerp(savedYoung * 0.6f, savedYoung, dustEase);
 
                 // The night stage fades away in the first quarter of the climb.
                 if (stage != null)
@@ -277,72 +286,8 @@ namespace MilkyWay
                 bottomCol: new Color(0.09f, 0.14f, 0.24f, 0.14f),
                 topCol: new Color(0.09f, 0.14f, 0.24f, 0f));
 
-            BuildForegroundProps(sprite, sun);
             Vector3 centreDir = -sun; centreDir.y = 0f; centreDir.Normalize();
             BuildSkyDome(sprite, sun, centreDir);
-        }
-
-        // ---- foreground silhouettes: the people this sky belongs to ----
-        // Detailed 2D alpha textures (Resources/NightProps, drawn offline) on
-        // yaw-billboarded quads — a parent and child hand in hand, their dog,
-        // a house, trees with proper crowns. Primitives read as toys; flat
-        // silhouettes read as a photograph's foreground, which is the point.
-        // Scale: the eye stands 0.012 units above the ground, adult ≈ 0.012.
-        void BuildForegroundProps(Shader sprite, Vector3 sun)
-        {
-            Vector3 toCentre = -sun; toCentre.y = 0f; toCentre.Normalize();
-            float groundY = -0.012f;
-
-            Vector3 At(float azDeg, float r) =>
-                Quaternion.AngleAxis(azDeg, Vector3.up) * toCentre * r + Vector3.up * groundY;
-
-            void Prop(string tex, float azDeg, float r, float height)
-            {
-                var t = Resources.Load<Texture2D>("NightProps/" + tex);
-                if (t == null) return;
-                var go = GameObject.CreatePrimitive(PrimitiveType.Quad);
-                go.name = "Prop " + tex;
-                Object.Destroy(go.GetComponent<Collider>());
-                go.transform.SetParent(stage.transform, false);
-                float width = height * t.width / (float)t.height;
-                go.transform.localScale = new Vector3(width, height, 1f);
-                go.transform.localPosition = At(azDeg, r) + Vector3.up * (height * 0.5f - 0.0004f);
-                var m = new Material(sprite) { renderQueue = 3103, mainTexture = t };
-                m.color = new Color(0.004f, 0.005f, 0.009f, 1f); // ridge-black silhouette
-                var mr = go.GetComponent<MeshRenderer>();
-                mr.sharedMaterial = m;
-                mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-                propMats.Add(m);
-                propQuads.Add(go.transform);
-            }
-
-            // The family and their dog, ~12 m out beside the direction we end
-            // up facing — they watch the centre with us.
-            Prop("family", 14f, 0.085f, 0.0165f);
-            Prop("dog", 18.5f, 0.080f, 0.006f);
-            // The house off to the side, and a small wood, both flanks.
-            Prop("house", -42f, 0.21f, 0.036f);
-            Prop("tree_a", -56f, 0.16f, 0.030f);
-            Prop("tree_b", -29f, 0.28f, 0.046f);
-            Prop("tree_c", 36f, 0.22f, 0.038f);
-            Prop("tree_a", 63f, 0.13f, 0.024f);
-            Prop("tree_b", 6f, 0.34f, 0.050f);
-        }
-
-        /// <summary>Flat silhouettes must face the viewer to read — yaw-only
-        /// billboard in the tilted stage frame, called while grounded.</summary>
-        void BillboardProps()
-        {
-            if (stage == null || propQuads.Count == 0) return;
-            Vector3 up = stage.transform.up;
-            foreach (var q in propQuads)
-            {
-                if (q == null) continue;
-                Vector3 to = q.position - transform.position;
-                to -= up * Vector3.Dot(to, up);
-                if (to.sqrMagnitude < 1e-10f) continue;
-                q.rotation = Quaternion.LookRotation(to.normalized, up);
-            }
         }
 
         // ---- the photographic sky: ESO's 360° Milky Way panorama ----------

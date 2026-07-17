@@ -61,10 +61,20 @@ namespace MilkyWay
             ReadHotkeys();
             if (!AnyPlaying)
                 ReadMouse();
-            // Clicking a planet zooms to its tour stop — from free flight OR
-            // mid-tour (jumping between stops). Not during the scale truth.
-            if (scaleTruth == null || !scaleTruth.IsPlaying)
+            // Clicking a planet zooms to its tour stop — from FREE FLIGHT
+            // only. While zoomed in, the mouse belongs to rotating the view
+            // (SolarSystemTour's drag-orbit), so picking is off and the
+            // affordance ring hides.
+            if (!AnyPlaying)
+            {
                 ReadPlanetClick();
+            }
+            else
+            {
+                hoverIndex = -1;
+                if (hoverRing != null) hoverRing.gameObject.SetActive(false);
+                if (tipPanel != null) tipPanel.gameObject.SetActive(false);
+            }
             if (helpBar != null)
             {
                 helpBar.SetActive(showHelp && !AnyPlaying);

@@ -48,6 +48,12 @@ namespace MilkyWay
         Text caption;
         RectTransform captionPanel;
         Button stopButton;
+        // "There — Andromeda": a pulsing ring + name tag over M31 while the
+        // Local Group beat plays, or nobody knows which dot is being praised.
+        LineRenderer m31Ring;
+        Material m31RingMat;
+        RectTransform m31Tag;
+        Text m31TagText;
 
         public void Begin()
         {
@@ -94,6 +100,7 @@ namespace MilkyWay
             if (skyOriginal != null) RenderSettings.skybox = skyOriginal;
             if (skyInstance != null) Destroy(skyInstance);
             skyInstance = null;
+            ShowM31Marker(false);
             HideCaption();
             ShowStop(false);
             if (orbit != null) orbit.enabled = true;
@@ -169,10 +176,12 @@ namespace MilkyWay
 
                 // Impostors fade in as we leave — no pop at the start.
                 Atmosphere(u, Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.02f, 0.16f, u)));
+                UpdateM31Marker();
 
                 if (stage == 0 && u > 0.23f && NarrationDone)
                 {
                     stage = 1; Narrate(1);
+                    ShowM31Marker(true);
                     Caption(Loc.T(
                         "저기 — 안드로메다 은하입니다. 우리 은하와 안드로메다, 그리고 수십 개의\n작은 은하들이 '국부은하군'이라는 가족을 이룹니다.",
                         "There — the Andromeda galaxy. Our galaxy, Andromeda, and dozens of\nsmall companions form a family called the Local Group.",
@@ -182,6 +191,7 @@ namespace MilkyWay
                 else if (stage == 1 && u > 0.60f && NarrationDone)
                 {
                     stage = 2; Narrate(2);
+                    ShowM31Marker(false);
                     Caption(Loc.T(
                         "은하들이 모여듭니다 — 처녀자리 은하단. 은하 천여 개가 서로의 중력에\n묶여 있습니다. 우리 국부은하군은 이 거대한 도시의 변두리 마을입니다.",
                         "Galaxies gather — the Virgo cluster, a thousand of them bound by each\nother's gravity. Our Local Group is a small village on its outskirts.",
@@ -269,6 +279,82 @@ namespace MilkyWay
                 if (skyInstance.HasProperty("_StarDensity")) skyInstance.SetFloat("_StarDensity", skyStars * k);
                 if (skyInstance.HasProperty("_GalaxyCount")) skyInstance.SetFloat("_GalaxyCount", skyGalaxies * k);
             }
+        }
+
+        // ---------------- the Andromeda marker -------------------------------
+
+        void ShowM31Marker(bool on)
+        {
+            if (on && m31Ring == null)
+            {
+                var go = new GameObject("M31 Marker");
+                m31Ring = go.AddComponent<LineRenderer>();
+                m31Ring.positionCount = 48;
+                m31Ring.loop = true;
+                m31Ring.useWorldSpace = true;
+                m31Ring.widthMultiplier = 9f;
+                m31RingMat = new Material(Shader.Find("Sprites/Default"));
+                m31Ring.material = m31RingMat;
+                m31Ring.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+
+                var canvas = BlackHoleUI.EnsureCanvas(GetComponent<Camera>());
+                m31Tag = BlackHoleUI.MakePanel(canvas.transform, "M31 Tag",
+                    new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0f), Vector2.zero, new Vector2(210f, 40f),
+                    accentLine: false);
+                m31TagText = BlackHoleUI.MakeText(m31Tag, "Text", 18, BlackHoleUI.TitleGold, TextAnchor.MiddleCenter,
+                    new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(200f, 30f), FontStyle.Bold);
+            }
+            if (m31Ring != null) m31Ring.gameObject.SetActive(on);
+            if (m31Tag != null) m31Tag.gameObject.SetActive(on);
+            if (on)
+            {
+                m31TagText.text = Loc.T("안드로메다 은하", "Andromeda", "アンドロメダ銀河", "仙女座星系");
+                UpdateM31Marker();
+            }
+        }
+
+        void UpdateM31Marker()
+        {
+            if (m31Ring == null || !m31Ring.gameObject.activeSelf) return;
+            var cam = GetComponent<Camera>();
+            Vector3 centre = CosmicWebField.M31Pos;
+            // camera-facing circle around M31, generous enough to read as a
+            // callout rather than a halo
+            Vector3 fwd = (centre - transform.position).normalized;
+            Vector3 right = Vector3.Cross(Vector3.up, fwd).normalized;
+            if (right.sqrMagnitude < 0.5f) right = Vector3.right;
+            Vector3 upv = Vector3.Cross(fwd, right);
+            float r = 130f;
+            for (int i = 0; i < 48; i++)
+            {
+                float a = i / 48f * Mathf.PI * 2f;
+                m31Ring.SetPosition(i, centre + (right * Mathf.Cos(a) + upv * Mathf.Sin(a)) * r);
+            }
+            float pulse = 0.55f + 0.25f * Mathf.Sin(Time.time * 3.2f);
+            var c = new Color(1.7f, 1.25f, 0.55f, pulse);
+            m31Ring.startColor = c; m31Ring.endColor = c;
+            // ring width that stays a couple of pixels regardless of distance
+            float dist = Vector3.Distance(transform.position, centre);
+            m31Ring.widthMultiplier = dist * 0.004f;
+
+            // name tag rides just above the ring on screen
+            if (cam != null && m31Tag != null)
+            {
+                Vector3 sp = cam.WorldToScreenPoint(centre + upv * r);
+                bool visible = sp.z > 0f;
+                m31Tag.gameObject.SetActive(visible);
+                if (visible)
+                    m31Tag.anchoredPosition = new Vector2(
+                        sp.x / Screen.width * 1920f - 960f,
+                        sp.y / Screen.height * 1080f - 540f + 10f);
+            }
+        }
+
+        void DestroyM31Marker()
+        {
+            if (m31Ring != null) Destroy(m31Ring.gameObject);
+            if (m31RingMat != null) Destroy(m31RingMat);
+            m31Ring = null; m31RingMat = null;
         }
 
         // ---------------- UI (the shared factory) ---------------------------

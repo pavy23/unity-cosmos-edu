@@ -54,6 +54,9 @@ namespace MilkyWay
         int step;
         float driftDeg;
         float savedMotionScale;
+        // Drag-orbit while parked at a body: the visitor turns the planet
+        // over in their hands; releasing hands the frame back to the drift.
+        float userYaw, userPitch;
 
         RectTransform card;
         Text cardTitle, cardBody, cardFooter, cardFacts;
@@ -310,6 +313,7 @@ namespace MilkyWay
             fromPos = transform.position;
             fromLook = transform.position + transform.forward * 10f;
             glideT = 0f;
+            userYaw = 0f; userPitch = 0f;
 
             NarrationManager.Instance.Play("mw_sol_" + step);
 
@@ -336,7 +340,38 @@ namespace MilkyWay
 
             // Live target pose: sun-lit three-quarter view of wherever the
             // body is THIS frame, drifting slowly around it for parallax.
-            driftDeg += 2.2f * Time.deltaTime;
+            // Dragging (either button) hands the orbit to the visitor: yaw
+            // and pitch around the body, so they can turn the planet over.
+            float dx = 0f, dy = 0f;
+            bool dragging = false;
+            if (glideT >= 1f)
+            {
+#if ENABLE_INPUT_SYSTEM
+                var mouse = UnityEngine.InputSystem.Mouse.current;
+                if (mouse != null && (mouse.leftButton.isPressed || mouse.rightButton.isPressed))
+                {
+                    dragging = true;
+                    var d2 = mouse.delta.ReadValue();
+                    dx = d2.x; dy = d2.y;
+                }
+#else
+                if (Input.GetMouseButton(0) || Input.GetMouseButton(1))
+                {
+                    dragging = true;
+                    dx = Input.GetAxis("Mouse X") * 12f;
+                    dy = Input.GetAxis("Mouse Y") * 12f;
+                }
+#endif
+            }
+            if (dragging)
+            {
+                userYaw += dx * 0.28f;
+                userPitch = Mathf.Clamp(userPitch + dy * 0.22f, -62f, 62f);
+            }
+            else
+            {
+                driftDeg += 2.2f * Time.deltaTime;
+            }
             Vector3 bodyPos = body.position;
             float radius = FramingRadius(body);
             Vector3 toSun = (rig.transform.position - bodyPos);
@@ -344,7 +379,9 @@ namespace MilkyWay
             Vector3 side = Vector3.Cross(toSun, Vector3.up).normalized;
             if (side.sqrMagnitude < 0.5f) side = Vector3.right;
             Vector3 baseDir = (toSun * 0.75f + side * 0.55f + Vector3.up * 0.28f).normalized;
-            Vector3 camDir = Quaternion.AngleAxis(driftDeg, Vector3.up) * baseDir;
+            Vector3 camDir = Quaternion.AngleAxis(driftDeg + userYaw, Vector3.up) * baseDir;
+            Vector3 pitchAxis = Vector3.Cross(Vector3.up, camDir).normalized;
+            camDir = Quaternion.AngleAxis(-userPitch, pitchAxis) * camDir;
             Vector3 targetPos = bodyPos + camDir * radius * Stops[step].frameMul;
 
             if (glideT < 1f)

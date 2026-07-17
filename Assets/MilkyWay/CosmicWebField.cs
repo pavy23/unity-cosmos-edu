@@ -96,8 +96,23 @@ namespace MilkyWay
         void AddCluster(System.Random rng, List<G> list, Vector3 centre, float sigma,
                         int members, float bcgSize, float ellipFraction)
         {
-            // Brightest cluster galaxy: one giant elliptical in the middle.
-            list.Add(new G { p = centre, size = bcgSize, tint = EllipTint * 1.35f, minPx = 10f });
+            // A JWST cluster frame is a size HIERARCHY: one enormous central
+            // halo, a handful of giant ellipticals tens of pixels across,
+            // a crowd of mid-size fuzz, and a dusting of faint members. The
+            // per-galaxy pixel floor is what carries the hierarchy to screen.
+            list.Add(new G { p = centre, size = bcgSize, tint = EllipTint * 1.5f, minPx = 26f });
+            int giants = Mathf.Max(6, members / 160);
+            for (int i = 0; i < giants; i++)
+            {
+                Vector3 p = centre + Gaussian3(rng) * sigma * 0.45f; // giants sink to the core
+                list.Add(new G
+                {
+                    p = p,
+                    size = 45f + 40f * (float)rng.NextDouble(),
+                    tint = EllipTint * (1.1f + 0.4f * (float)rng.NextDouble()),
+                    minPx = 13f + 9f * (float)rng.NextDouble(),
+                });
+            }
             for (int i = 0; i < members; i++)
             {
                 Vector3 p = centre + Gaussian3(rng) * sigma;
@@ -105,11 +120,9 @@ namespace MilkyWay
                 list.Add(new G
                 {
                     p = p,
-                    // A JWST cluster frame is a size hierarchy: many mid-size
-                    // members and a few giants, not a uniform dust of points.
                     size = 9f + 42f * Mathf.Pow((float)rng.NextDouble(), 1.8f),
                     tint = (ellip ? EllipTint : SpiralTint) * (0.65f + 0.6f * (float)rng.NextDouble()),
-                    minPx = 4.5f + 4f * (float)rng.NextDouble(),
+                    minPx = 4f + 16f * Mathf.Pow((float)rng.NextDouble(), 2.5f),
                 });
             }
         }

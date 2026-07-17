@@ -29,13 +29,13 @@ Material:
     - _ArmWidth: 0.9
     - _Brightness: 2.2
     - _BulgeBoost: 0.9
-    - _Clumpiness: 0.85
-    - _DustStrength: 3.4
-    - _HiiStrength: 1
+    - _Clumpiness: 1
+    - _DustStrength: 4.2
+    - _HiiStrength: 0.8
     - _PitchTan: 0.2217
     - _Steps: 64
     - _TidalAmount: 0
-    - _YoungStrength: 1
+    - _YoungStrength: 0.75
     m_Colors:
     - _TidalDir: {r: -0.4538399, g: 0, b: -0.8910832, a: 0}
   m_BuildTextureStacks: []
