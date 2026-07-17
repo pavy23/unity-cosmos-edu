@@ -1,0 +1,8 @@
+eso_milkyway_panorama.jpg — "The Milky Way panorama" by ESO/S. Brunier
+https://www.eso.org/public/images/eso0932a/
+License: CC Attribution 4.0 International (https://creativecommons.org/licenses/by/4.0/)
+360-degree panoramic image of the Milky Way, Gigagalaxy Zoom project.
+Downloaded 2026-07-17 (6000x3000).
+
+The silhouette PNGs (family, dog, house, tree_a/b/c) are original art
+generated for this project (procedural PIL drawings).

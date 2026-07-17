@@ -27,6 +27,19 @@ namespace MilkyWay
         static readonly string[] PickableBodies =
             { "Sun", "Mercury", "Venus", "Earth", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune" };
 
+        static readonly string[] BodyNamesKo = { "태양", "수성", "금성", "지구", "화성", "목성", "토성", "천왕성", "해왕성" };
+        static readonly string[] BodyNamesEn = { "Sun", "Mercury", "Venus", "Earth", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune" };
+        static readonly string[] BodyNamesJa = { "太陽", "水星", "金星", "地球", "火星", "木星", "土星", "天王星", "海王星" };
+        static readonly string[] BodyNamesZh = { "太阳", "水星", "金星", "地球", "火星", "木星", "土星", "天王星", "海王星" };
+
+        // hover affordance: a pulsing ring around the body under the cursor
+        Transform hoverRing;
+        Material hoverMat;
+        Texture2D ringTex;
+        RectTransform tipPanel;
+        Text tipText;
+        int hoverIndex = -1;
+
         bool AnyPlaying =>
             (tour != null && tour.Running) ||
             (scaleTruth != null && scaleTruth.IsPlaying);
@@ -60,28 +73,22 @@ namespace MilkyWay
         }
 
         /// <summary>Screen-space picking — the rig's bodies carry no
-        /// colliders, so we compare the click against each body's projected
-        /// position and apparent radius (plus finger-friendly padding).</summary>
-        void ReadPlanetClick()
+        /// colliders, so we compare the pointer against each body's projected
+        /// position and apparent radius (plus finger-friendly padding).
+        /// Returns the PickableBodies index, or -1; out params locate the hit
+        /// body for the hover ring.</summary>
+        int PickBody(Vector2 pointer, out Vector3 bodyPos, out float bodyRadius)
         {
-            Vector2 click;
-#if ENABLE_INPUT_SYSTEM
-            var mouse = Mouse.current;
-            if (mouse == null || !mouse.leftButton.wasPressedThisFrame) return;
-            click = mouse.position.ReadValue();
-#else
-            if (!Input.GetMouseButtonDown(0)) return;
-            click = Input.mousePosition;
-#endif
+            bodyPos = Vector3.zero; bodyRadius = 0f;
             var rig = stage != null ? stage.Rig : null;
-            if (rig == null || tour == null) return;
+            if (rig == null) return -1;
             var cam = GetComponent<Camera>();
 
-            string best = null;
+            int best = -1;
             float bestDist = float.MaxValue;
-            foreach (var name in PickableBodies)
+            for (int i = 0; i < PickableBodies.Length; i++)
             {
-                var body = rig.GetBody(name);
+                var body = rig.GetBody(PickableBodies[i]);
                 if (body == null) continue;
                 Vector3 sp = cam.WorldToScreenPoint(body.position);
                 if (sp.z <= 0f) continue; // behind the camera
@@ -91,12 +98,104 @@ namespace MilkyWay
                 float projected = radius / sp.z * (Screen.height * 0.5f) /
                                   Mathf.Tan(cam.fieldOfView * 0.5f * Mathf.Deg2Rad);
                 float hitRadius = Mathf.Clamp(projected * 1.5f, 22f, 240f);
-                float d = Vector2.Distance(click, new Vector2(sp.x, sp.y));
-                if (d < hitRadius && d < bestDist) { bestDist = d; best = name; }
+                float d = Vector2.Distance(pointer, new Vector2(sp.x, sp.y));
+                if (d < hitRadius && d < bestDist)
+                {
+                    bestDist = d; best = i;
+                    bodyPos = body.position; bodyRadius = radius;
+                }
             }
-            if (best == null) return;
-            int index = SolarSystemTour.StopIndexOf(best);
+            return best;
+        }
+
+        void ReadPlanetClick()
+        {
+            Vector2 pointer;
+            bool clicked;
+#if ENABLE_INPUT_SYSTEM
+            var mouse = Mouse.current;
+            if (mouse == null) return;
+            pointer = mouse.position.ReadValue();
+            clicked = mouse.leftButton.wasPressedThisFrame;
+#else
+            pointer = Input.mousePosition;
+            clicked = Input.GetMouseButtonDown(0);
+#endif
+            hoverIndex = PickBody(pointer, out Vector3 bodyPos, out float bodyRadius);
+            UpdateHoverAffordance(pointer, bodyPos, bodyRadius);
+
+            if (!clicked || hoverIndex < 0 || tour == null) return;
+            int index = SolarSystemTour.StopIndexOf(PickableBodies[hoverIndex]);
             if (index >= 0) tour.StartTourAt(index);
+        }
+
+        // ---- the hover affordance: a pulsing ring + a name tag -------------
+
+        void UpdateHoverAffordance(Vector2 pointer, Vector3 bodyPos, float bodyRadius)
+        {
+            var cam = GetComponent<Camera>();
+            if (hoverIndex >= 0)
+            {
+                EnsureHoverRing();
+                hoverRing.gameObject.SetActive(true);
+                hoverRing.position = bodyPos;
+                // face the camera, sized comfortably outside the body,
+                // breathing gently so it reads as alive/selectable
+                float pulse = 1f + 0.06f * Mathf.Sin(Time.time * 4.2f);
+                hoverRing.localScale = Vector3.one * bodyRadius * 3.1f * pulse;
+                hoverRing.rotation = Quaternion.LookRotation(hoverRing.position - cam.transform.position);
+                hoverMat.color = new Color(1f, 0.78f, 0.35f, 0.5f + 0.15f * Mathf.Sin(Time.time * 4.2f));
+
+                EnsureTip();
+                tipPanel.gameObject.SetActive(true);
+                tipPanel.anchoredPosition = new Vector2(
+                    pointer.x / Screen.width * 1920f - 960f + 16f,
+                    pointer.y / Screen.height * 1080f - 540f + 34f);
+                tipText.text = Loc.T(BodyNamesKo[hoverIndex], BodyNamesEn[hoverIndex],
+                                     BodyNamesJa[hoverIndex], BodyNamesZh[hoverIndex]);
+            }
+            else
+            {
+                if (hoverRing != null) hoverRing.gameObject.SetActive(false);
+                if (tipPanel != null) tipPanel.gameObject.SetActive(false);
+            }
+        }
+
+        void EnsureHoverRing()
+        {
+            if (hoverRing != null) return;
+            // a soft ring texture, drawn once
+            const int S = 128;
+            ringTex = new Texture2D(S, S, TextureFormat.RGBA32, false);
+            var px = new Color[S * S];
+            for (int y = 0; y < S; y++)
+                for (int x = 0; x < S; x++)
+                {
+                    float r = Vector2.Distance(new Vector2(x, y), new Vector2(S / 2f - 0.5f, S / 2f - 0.5f)) / (S / 2f);
+                    float band = Mathf.Exp(-Mathf.Pow((r - 0.86f) / 0.055f, 2f));
+                    px[y * S + x] = new Color(1f, 1f, 1f, band);
+                }
+            ringTex.SetPixels(px);
+            ringTex.Apply();
+
+            var go = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            go.name = "Hover Ring";
+            Destroy(go.GetComponent<Collider>());
+            hoverMat = new Material(Shader.Find("Sprites/Default")) { mainTexture = ringTex, renderQueue = 3200 };
+            go.GetComponent<MeshRenderer>().sharedMaterial = hoverMat;
+            go.GetComponent<MeshRenderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            hoverRing = go.transform;
+        }
+
+        void EnsureTip()
+        {
+            if (tipPanel != null) return;
+            var canvas = BlackHoleUI.EnsureCanvas(GetComponent<Camera>());
+            tipPanel = BlackHoleUI.MakePanel(canvas.transform, "Body Tip",
+                new Vector2(0.5f, 0.5f), new Vector2(0f, 0f), Vector2.zero, new Vector2(150f, 40f),
+                accentLine: false);
+            tipText = BlackHoleUI.MakeText(tipPanel, "Text", 18, BlackHoleUI.TitleGold, TextAnchor.MiddleCenter,
+                new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(140f, 30f), FontStyle.Bold);
         }
 
         void ReadHotkeys()
@@ -213,6 +312,12 @@ namespace MilkyWay
             help = BlackHoleUI.MakeText(bar, "Text", 15, BlackHoleUI.TextSecondary, TextAnchor.MiddleCenter,
                 new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1200f, 32f));
             UpdateHelpText();
+        }
+
+        void OnDestroy()
+        {
+            if (hoverMat != null) Destroy(hoverMat);
+            if (ringTex != null) Destroy(ringTex);
         }
 
         static string Key(string k) => "<color=#FFC46E>" + k + "</color> ";

@@ -35,7 +35,10 @@ namespace MilkyWay
         RectTransform captionPanel;
         Button stopButton;
         GameObject stage;          // ground + ridge + airglow, faded as one
-        Material groundMat, ridgeMat, glowMat, propMat;
+        Material groundMat, ridgeMat, glowMat, domeMat;
+        readonly System.Collections.Generic.List<Material> propMats = new();
+        readonly System.Collections.Generic.List<Transform> propQuads = new();
+        Mesh domeMesh;
 
         public void Begin()
         {
@@ -46,6 +49,7 @@ namespace MilkyWay
         void Update()
         {
             if (!IsPlaying) return;
+            BillboardProps();
 #if ENABLE_INPUT_SYSTEM
             var kb = UnityEngine.InputSystem.Keyboard.current;
             if (kb != null && kb.escapeKey.wasPressedThisFrame) Abort();
@@ -274,85 +278,130 @@ namespace MilkyWay
                 topCol: new Color(0.09f, 0.14f, 0.24f, 0f));
 
             BuildForegroundProps(sprite, sun);
+            Vector3 centreDir = -sun; centreDir.y = 0f; centreDir.Normalize();
+            BuildSkyDome(sprite, sun, centreDir);
         }
 
         // ---- foreground silhouettes: the people this sky belongs to ----
-        // A parent and child hand in hand, their dog, a house, a few trees —
-        // the classic night-photo foreground, built from primitives in the
-        // same near-black as the ridge. Scale: the eye stands 0.012 units
-        // above the ground, so 1 unit ≈ 140 m; an adult is ~0.012.
+        // Detailed 2D alpha textures (Resources/NightProps, drawn offline) on
+        // yaw-billboarded quads — a parent and child hand in hand, their dog,
+        // a house, trees with proper crowns. Primitives read as toys; flat
+        // silhouettes read as a photograph's foreground, which is the point.
+        // Scale: the eye stands 0.012 units above the ground, adult ≈ 0.012.
         void BuildForegroundProps(Shader sprite, Vector3 sun)
         {
-            propMat = new Material(sprite) { renderQueue = 3103 };
-            propMat.color = new Color(0.004f, 0.005f, 0.009f, 1f);
-
             Vector3 toCentre = -sun; toCentre.y = 0f; toCentre.Normalize();
             float groundY = -0.012f;
 
-            // Position helper: azimuth degrees off the galactic-centre line.
             Vector3 At(float azDeg, float r) =>
                 Quaternion.AngleAxis(azDeg, Vector3.up) * toCentre * r + Vector3.up * groundY;
 
-            Transform P(PrimitiveType type, Vector3 pos, Vector3 scale, Quaternion? rot = null)
+            void Prop(string tex, float azDeg, float r, float height)
             {
-                var go = GameObject.CreatePrimitive(type);
+                var t = Resources.Load<Texture2D>("NightProps/" + tex);
+                if (t == null) return;
+                var go = GameObject.CreatePrimitive(PrimitiveType.Quad);
+                go.name = "Prop " + tex;
                 Object.Destroy(go.GetComponent<Collider>());
                 go.transform.SetParent(stage.transform, false);
-                go.transform.localPosition = pos;
-                go.transform.localScale = scale;
-                if (rot.HasValue) go.transform.localRotation = rot.Value;
-                go.GetComponent<MeshRenderer>().sharedMaterial = propMat;
-                go.GetComponent<MeshRenderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-                return go.transform;
+                float width = height * t.width / (float)t.height;
+                go.transform.localScale = new Vector3(width, height, 1f);
+                go.transform.localPosition = At(azDeg, r) + Vector3.up * (height * 0.5f - 0.0004f);
+                var m = new Material(sprite) { renderQueue = 3103, mainTexture = t };
+                m.color = new Color(0.004f, 0.005f, 0.009f, 1f); // ridge-black silhouette
+                var mr = go.GetComponent<MeshRenderer>();
+                mr.sharedMaterial = m;
+                mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                propMats.Add(m);
+                propQuads.Add(go.transform);
             }
 
-            // The family, 12 m out, just beside the direction we end up
-            // facing — they watch the centre with us.
-            Vector3 adultPos = At(13f, 0.085f);
-            P(PrimitiveType.Capsule, adultPos + Vector3.up * 0.0055f, new Vector3(0.0034f, 0.0042f, 0.0034f)); // body
-            P(PrimitiveType.Sphere, adultPos + Vector3.up * 0.0112f, Vector3.one * 0.0036f);                  // head
-            Vector3 childPos = At(16.5f, 0.083f);
-            P(PrimitiveType.Capsule, childPos + Vector3.up * 0.0032f, new Vector3(0.0026f, 0.0026f, 0.0026f));
-            P(PrimitiveType.Sphere, childPos + Vector3.up * 0.0068f, Vector3.one * 0.0028f);
-            // Held hands: one thin bar between the two silhouettes.
-            Vector3 handA = adultPos + Vector3.up * 0.0052f;
-            Vector3 handB = childPos + Vector3.up * 0.0042f;
-            P(PrimitiveType.Cylinder, (handA + handB) * 0.5f,
-              new Vector3(0.0007f, Vector3.Distance(handA, handB) * 0.5f, 0.0007f),
-              Quaternion.FromToRotation(Vector3.up, handB - handA));
+            // The family and their dog, ~12 m out beside the direction we end
+            // up facing — they watch the centre with us.
+            Prop("family", 14f, 0.085f, 0.0165f);
+            Prop("dog", 18.5f, 0.080f, 0.006f);
+            // The house off to the side, and a small wood, both flanks.
+            Prop("house", -42f, 0.21f, 0.036f);
+            Prop("tree_a", -56f, 0.16f, 0.030f);
+            Prop("tree_b", -29f, 0.28f, 0.046f);
+            Prop("tree_c", 36f, 0.22f, 0.038f);
+            Prop("tree_a", 63f, 0.13f, 0.024f);
+            Prop("tree_b", 6f, 0.34f, 0.050f);
+        }
 
-            // The dog, sitting a step ahead of the child.
-            Vector3 dogPos = At(19f, 0.079f);
-            P(PrimitiveType.Capsule, dogPos + Vector3.up * 0.0018f, new Vector3(0.0014f, 0.0016f, 0.0014f),
-              Quaternion.Euler(70f, 0f, 0f));                                                  // body, leaning back on haunches
-            P(PrimitiveType.Sphere, dogPos + Vector3.up * 0.0036f + Quaternion.AngleAxis(19f, Vector3.up) * toCentre * 0.0012f,
-              Vector3.one * 0.0018f);                                                          // head
-            P(PrimitiveType.Capsule, dogPos + Vector3.up * 0.0044f, new Vector3(0.0005f, 0.0009f, 0.0005f),
-              Quaternion.Euler(0f, 0f, 24f));                                                  // an ear
-
-            // The house, off to the side: box, gable roof, chimney, 30 m out.
-            Vector3 housePos = At(-42f, 0.21f);
-            P(PrimitiveType.Cube, housePos + Vector3.up * 0.009f, new Vector3(0.030f, 0.018f, 0.020f));
-            P(PrimitiveType.Cube, housePos + Vector3.up * 0.021f, new Vector3(0.023f, 0.010f, 0.0145f),
-              Quaternion.Euler(0f, 0f, 45f));
-            P(PrimitiveType.Cube, housePos + Vector3.up * 0.026f + Vector3.right * 0.008f,
-              new Vector3(0.004f, 0.008f, 0.004f));
-
-            // A few trees, both sides, varied heights — spheres on a trunk
-            // read as broadleaf silhouettes at night.
-            void Tree(float az, float r, float s)
+        /// <summary>Flat silhouettes must face the viewer to read — yaw-only
+        /// billboard in the tilted stage frame, called while grounded.</summary>
+        void BillboardProps()
+        {
+            if (stage == null || propQuads.Count == 0) return;
+            Vector3 up = stage.transform.up;
+            foreach (var q in propQuads)
             {
-                Vector3 basePos = At(az, r);
-                P(PrimitiveType.Cylinder, basePos + Vector3.up * 0.006f * s, new Vector3(0.0016f * s, 0.006f * s, 0.0016f * s));
-                P(PrimitiveType.Sphere, basePos + Vector3.up * 0.0135f * s, Vector3.one * 0.012f * s);
-                P(PrimitiveType.Sphere, basePos + Vector3.up * 0.019f * s, Vector3.one * 0.008f * s);
-                P(PrimitiveType.Sphere, basePos + (Vector3.up * 0.012f + Vector3.forward * 0.005f) * s, Vector3.one * 0.008f * s);
+                if (q == null) continue;
+                Vector3 to = q.position - transform.position;
+                to -= up * Vector3.Dot(to, up);
+                if (to.sqrMagnitude < 1e-10f) continue;
+                q.rotation = Quaternion.LookRotation(to.normalized, up);
             }
-            Tree(-56f, 0.16f, 1.0f);
-            Tree(-30f, 0.28f, 1.5f);
-            Tree(36f, 0.22f, 1.2f);
-            Tree(62f, 0.13f, 0.8f);
-            Tree(6f, 0.34f, 1.6f);
+        }
+
+        // ---- the photographic sky: ESO's 360° Milky Way panorama ----------
+        // (ESO/S. Brunier, CC BY 4.0.) While we stand on the ground the sky
+        // IS the real observed sky — the volumetric can't compete with a
+        // photograph at this exposure, and doesn't need to: it takes over
+        // during liftoff as the dome fades, and the two bands align because
+        // both lie in the world's galactic plane.
+        void BuildSkyDome(Shader sprite, Vector3 sun, Vector3 toCentre)
+        {
+            var pano = Resources.Load<Texture2D>("NightProps/eso_milkyway_panorama");
+            if (pano == null) return;
+
+            const int LON = 48, LAT = 24;
+            var verts = new Vector3[(LON + 1) * (LAT + 1)];
+            var uvs = new Vector2[verts.Length];
+            var tris = new int[LON * LAT * 6];
+            for (int y = 0; y <= LAT; y++)
+            {
+                float v = y / (float)LAT;
+                float phi = (v - 0.5f) * Mathf.PI;
+                for (int x = 0; x <= LON; x++)
+                {
+                    float u = x / (float)LON;
+                    float theta = (u - 0.5f) * Mathf.PI * 2f;
+                    int i = y * (LON + 1) + x;
+                    verts[i] = new Vector3(Mathf.Cos(phi) * Mathf.Cos(theta), Mathf.Sin(phi),
+                                           Mathf.Cos(phi) * Mathf.Sin(theta));
+                    uvs[i] = new Vector2(u, v);
+                }
+            }
+            int tIdx = 0;
+            for (int y = 0; y < LAT; y++)
+                for (int x = 0; x < LON; x++)
+                {
+                    int a = y * (LON + 1) + x, b = a + LON + 1;
+                    // wound so the INSIDE is the front face — we live in here
+                    tris[tIdx++] = a; tris[tIdx++] = a + 1; tris[tIdx++] = b;
+                    tris[tIdx++] = a + 1; tris[tIdx++] = b + 1; tris[tIdx++] = b;
+                }
+            domeMesh = new Mesh { name = "Photo Sky Dome" };
+            domeMesh.vertices = verts;
+            domeMesh.uv = uvs;
+            domeMesh.triangles = tris;
+            domeMesh.RecalculateBounds();
+
+            var go = new GameObject("Photo Sky (ESO panorama)");
+            go.transform.SetParent(stage.transform, false);
+            go.transform.position = sun;
+            // World-aligned, NOT tilted with the stage: the photo's band must
+            // lie in the world's galactic plane (u = 0.5 → +X → the centre).
+            go.transform.rotation = Quaternion.FromToRotation(Vector3.right, toCentre);
+            go.transform.localScale = Vector3.one * 3f;
+            go.AddComponent<MeshFilter>().sharedMesh = domeMesh;
+            var mr = go.AddComponent<MeshRenderer>();
+            domeMat = new Material(sprite) { renderQueue = 3050, mainTexture = pano };
+            domeMat.color = new Color(1f, 1f, 1f, 1f);
+            mr.sharedMaterial = domeMat;
+            mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         }
 
         /// <summary>Builds a cylindrical strip around the viewer whose top edge
@@ -395,7 +444,9 @@ namespace MilkyWay
 
         void FadeStage(float a)
         {
-            if (propMat != null) { var c = propMat.color; c.a = a; propMat.color = c; }
+            foreach (var m in propMats)
+                if (m != null) { var c = m.color; c.a = a; m.color = c; }
+            if (domeMat != null) { var c = domeMat.color; c.a = Mathf.Clamp01(a * 1.25f); domeMat.color = c; }
             if (groundMat != null) { var c = groundMat.color; c.a = a; groundMat.color = c; }
             if (ridgeMat != null) { var c = ridgeMat.color; c.a = a; ridgeMat.color = c; }
             if (glowMat != null) { var c = glowMat.color; c.a = a; glowMat.color = c; }
@@ -407,9 +458,13 @@ namespace MilkyWay
             if (groundMat != null) Object.Destroy(groundMat);
             if (ridgeMat != null) Object.Destroy(ridgeMat);
             if (glowMat != null) Object.Destroy(glowMat);
-            if (propMat != null) Object.Destroy(propMat);
+            foreach (var m in propMats) if (m != null) Object.Destroy(m);
+            propMats.Clear();
+            propQuads.Clear();
+            if (domeMat != null) Object.Destroy(domeMat);
+            if (domeMesh != null) Object.Destroy(domeMesh);
             stage = null;
-            groundMat = null; ridgeMat = null; glowMat = null; propMat = null;
+            groundMat = null; ridgeMat = null; glowMat = null; domeMat = null; domeMesh = null;
         }
 
         // ---------------- UI ----------------
