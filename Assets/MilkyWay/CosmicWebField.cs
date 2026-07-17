@@ -22,7 +22,7 @@ namespace MilkyWay
     public class CosmicWebField : MonoBehaviour
     {
         [Tooltip("Field galaxies threaded on the web (clusters come extra).")]
-        public int webCount = 40000;
+        public int webCount = 52000;
         public int seed = 77;
 
         /// <summary>Direction the zoom-out recedes along — the showpieces
@@ -135,7 +135,11 @@ namespace MilkyWay
         void AddWeb(System.Random rng, List<G> list)
         {
             const float rMin = 15000f, rMax = 195000f;
-            const float noiseScale = 1f / 34000f;
+            // Wavelength tuned for the DEEP-FIELD HOLD at 180,000 kpc: strands
+            // ~50,000 kpc apart give a handful of bold ropes across the frame.
+            // The old 34,000 packed in so many thin strands that, projected
+            // through the whole ball, they averaged into featureless grain.
+            const float noiseScale = 1f / 50000f;
             int placed = 0, clustersLeft = 14;
             // Rejection-sample the double level set. The acceptance window
             // widens with radius so the far field stays populated even though
@@ -145,18 +149,29 @@ namespace MilkyWay
                 Vector3 p = RandDir(rng) * (rMin + (rMax - rMin) * Mathf.Pow((float)rng.NextDouble(), 0.55f));
                 float n1 = Fbm(p * noiseScale, 3);
                 float n2 = Fbm(p * noiseScale + new Vector3(31.7f, 7.3f, 19.1f), 3);
-                float w = 0.045f + 0.03f * (p.magnitude / rMax);
+                // Narrow acceptance = SHARP strands. The old 0.045-0.075 window
+                // smeared the same head-count into fat, low-contrast bands that
+                // read as random static from the deep-field hold — the whole
+                // "spider's web" claim of the narration was invisible.
+                float w = 0.028f + 0.022f * (p.magnitude / rMax);
                 if (Mathf.Abs(n1 - 0.5f) > w || Mathf.Abs(n2 - 0.5f) > w) continue;
 
                 float rnd = (float)rng.NextDouble();
                 bool ellip = rnd < 0.3f;
+                // How close this point sits to the strand's SPINE (both level
+                // sets dead-centre). Core galaxies glow harder and bigger, so
+                // each filament reads as a luminous rope with fuzzy edges
+                // instead of a uniform dust of equal points.
+                float core = 1f - Mathf.Clamp01(
+                    (Mathf.Abs(n1 - 0.5f) + Mathf.Abs(n2 - 0.5f)) / (w * 1.2f));
                 list.Add(new G
                 {
                     p = p,
-                    size = 8f + 30f * Mathf.Pow((float)rng.NextDouble(), 2f),
+                    size = (8f + 30f * Mathf.Pow((float)rng.NextDouble(), 2f)) * (1f + 0.6f * core),
                     tint = (ellip ? EllipTint : rnd > 0.9f ? IrregTint : SpiralTint)
                          * (0.5f + 0.6f * (float)rng.NextDouble()),
-                    minPx = 2.2f,
+                    minPx = 2.6f + 1.8f * core,
+                    boost = 1.8f + 2.4f * core,
                 });
                 placed++;
 
