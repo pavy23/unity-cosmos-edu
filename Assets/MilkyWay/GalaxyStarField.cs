@@ -31,6 +31,16 @@ namespace MilkyWay
         GameObject holder;
         int builtCount = -1, builtSeed = -1;
 
+        // The bake is DETERMINISTIC in (starCount, seed) — and every clone of
+        // the main galaxy (four zoo specimens in a single frame, Andromeda)
+        // uses the same pair. One shared mesh replaces N identical 480k-vert
+        // synchronous bakes (the F8 stall) and the per-clone meshes the old
+        // teardown quietly leaked. Refcounted so the last field standing
+        // frees it; a field with a DIFFERENT config just bakes privately.
+        static Mesh cachedMesh;
+        static int cachedCount = -1, cachedSeed = -1, cachedUsers;
+        bool usingCache;
+
         void OnEnable() => Build();
         void OnDisable() => Teardown();
 
@@ -42,6 +52,20 @@ namespace MilkyWay
 
         void Teardown()
         {
+            if (usingCache)
+            {
+                usingCache = false;
+                if (--cachedUsers <= 0)
+                {
+                    if (cachedMesh != null) DestroyImmediate(cachedMesh);
+                    cachedMesh = null; cachedCount = cachedSeed = -1; cachedUsers = 0;
+                }
+            }
+            else if (holder != null)
+            {
+                var mf = holder.GetComponent<MeshFilter>();
+                if (mf != null && mf.sharedMesh != null) DestroyImmediate(mf.sharedMesh);
+            }
             if (holder != null) DestroyImmediate(holder);
             holder = null;
             builtCount = builtSeed = -1;
@@ -72,7 +96,23 @@ namespace MilkyWay
             mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             mr.receiveShadows = false;
 
-            mf.sharedMesh = BakeMesh();
+            if (cachedMesh != null && cachedCount == starCount && cachedSeed == seed)
+            {
+                mf.sharedMesh = cachedMesh;
+                cachedUsers++;
+                usingCache = true;
+            }
+            else if (cachedMesh == null)
+            {
+                mf.sharedMesh = cachedMesh = BakeMesh();
+                cachedCount = starCount; cachedSeed = seed; cachedUsers = 1;
+                usingCache = true;
+            }
+            else
+            {
+                mf.sharedMesh = BakeMesh(); // different config: private mesh
+                usingCache = false;
+            }
         }
 
         Mesh BakeMesh()

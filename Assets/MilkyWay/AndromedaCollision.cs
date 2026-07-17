@@ -46,6 +46,8 @@ namespace MilkyWay
         Text caption, yearline;
         RectTransform captionPanel;
         Button stopButton;
+        RectTransform tagMW, tagM31;
+        Text tagMWText, tagM31Text;
 
         // Subtitle == voice (the exhibit-wide convention): these are the
         // exact texts the mw_m31_N clips are generated from. Line 0 carries
@@ -131,6 +133,7 @@ namespace MilkyWay
             RestoreMilkyWay();
             DestroyAndromeda();
             HideCaption();
+            UpdateTags(false);
             ShowStop(false);
             if (orbit != null) orbit.enabled = true;
             IsPlaying = false;
@@ -204,6 +207,8 @@ namespace MilkyWay
                 // static pair reads as a screensaver, not a countdown.
                 PlaceBodies(0f, Mathf.Lerp(368f, 340f, t / dur), 0f);
                 PlaceCamera(340f, Time.deltaTime, -1f);
+                UpdateCompanions(1f);
+                UpdateTags(true);
                 yield return null;
             }
 
@@ -221,6 +226,7 @@ namespace MilkyWay
                 PlaceCamera(sep, Time.deltaTime, u);
                 Tides(u, sep);
                 YearLine(u);
+                UpdateTags(u < 0.28f);
 
                 if (stage == 0 && u > 0.30f && NarrationDone)
                 {
@@ -327,19 +333,26 @@ namespace MilkyWay
 
         /// <summary>u &lt; 0 = the framing shot. At 340 kpc separation no field
         /// of view holds both galaxies at a readable size, so the opening
-        /// stands BEHIND home instead: the Milky Way big in the foreground,
-        /// M31 a small disk coming straight at us beyond it. The wide two-body
-        /// orbit blends in over the first sixth of the encounter.</summary>
+        /// stands on ANDROMEDA'S side: M31 big in the foreground with its
+        /// companions, and the Milky Way — us — the small disk it is falling
+        /// toward. A slow sway keeps the shot alive. The wide two-body orbit
+        /// blends in over the first sixth of the encounter.</summary>
         void PlaceCamera(float sep, float dt, float u)
         {
             Vector3 m31Pos = andromeda != null ? andromeda.transform.position : Vector3.zero;
             Vector3 axis = (m31Pos - mw.position).normalized;
 
+            // Beyond M31, looking back through it toward home. The sway is a
+            // gentle parallax drift, not a static tripod.
+            Vector3 nearOffset = Quaternion.AngleAxis(Mathf.Sin(Time.time * 0.22f) * 9f, Vector3.up)
+                               * (axis * 185f + Vector3.up * 58f);
+            Vector3 nearWant = m31Pos + nearOffset;
+
             Vector3 focusWant, want;
             if (u < 0f)
             {
-                focusWant = Vector3.Lerp(mw.position, m31Pos, 0.45f);
-                want = mw.position - axis * 175f + Vector3.up * 55f;
+                focusWant = Vector3.Lerp(m31Pos, mw.position, 0.45f);
+                want = nearWant;
             }
             else
             {
@@ -347,13 +360,12 @@ namespace MilkyWay
                 // Aim a touch below the pair so the caption panel doesn't
                 // swallow whichever galaxy swings through the lower frame.
                 Vector3 centre = Vector3.down * (5f + sep * 0.05f);
-                focusWant = Vector3.Lerp(Vector3.Lerp(mw.position, m31Pos, 0.45f), centre, wide);
+                focusWant = Vector3.Lerp(Vector3.Lerp(m31Pos, mw.position, 0.45f), centre, wide);
                 float dist = Mathf.Clamp(sep * 1.15f + 58f, 85f, 330f);
                 camYaw += dt * 2.2f;
                 var dir = (Quaternion.AngleAxis(camYaw, Vector3.up)
                          * new Vector3(0f, 0.5f, -1f)).normalized;
                 Vector3 wideWant = dir * dist;
-                Vector3 nearWant = mw.position - axis * 175f + Vector3.up * 55f;
                 want = Vector3.Lerp(nearWant, wideWant, wide);
             }
             transform.position = Vector3.Lerp(transform.position, want, 1f - Mathf.Exp(-dt * 1.6f));
@@ -387,6 +399,7 @@ namespace MilkyWay
                 m31Volume.SetFloat(BrightnessId, 2.2f * Mathf.Max(keep, 0.001f));
                 m31Volume.SetFloat(DustId, m31DustInitial * keep);
                 if (m31Stars != null) m31Stars.SetFloat(StarBrightId, 1.15f * keep);
+                UpdateCompanions(keep);
             }
             // The survivor takes the elliptical look.
             if (controller.volumeMaterial != null)
@@ -426,9 +439,9 @@ namespace MilkyWay
             andromeda.name = "Andromeda (M31)";
             // The clone's controller would keep writing the SHARED materials.
             Destroy(andromeda.GetComponent<MilkyWayController>());
-            // A little bigger, and tilted so the pair never reads as mirrored.
+            // Noticeably bigger, and tilted so the pair never reads as mirrored.
             andromeda.transform.rotation = Quaternion.Euler(24f, 140f, 8f);
-            andromeda.transform.localScale = Vector3.one * 1.15f;
+            andromeda.transform.localScale = Vector3.one * 1.25f;
 
             foreach (var mr in andromeda.GetComponentsInChildren<MeshRenderer>(true))
             {
@@ -438,8 +451,23 @@ namespace MilkyWay
                 else if (mr.sharedMaterial == controller.starMaterial)
                     mr.sharedMaterial = m31Stars = new Material(controller.starMaterial);
             }
+            // Andromeda per the photographs, not a recolored Milky Way: a
+            // dominant warm bulge, tightly wound smooth arms (~7 deg pitch vs
+            // our ~12), the famous dark dust ring, and far quieter star
+            // formation — M31's disk is redder and calmer than ours.
+            if (m31Volume != null)
+            {
+                m31Volume.SetFloat("_BulgeBoost", 1.9f);
+                m31Volume.SetFloat("_PitchTan", 0.13f);
+                m31Volume.SetFloat("_ArmWidth", 1.35f);
+                m31Volume.SetFloat("_Clumpiness", 0.55f);
+                m31Volume.SetFloat(DustId, 5.0f);
+                m31Volume.SetFloat("_HiiStrength", 0.35f);
+                m31Volume.SetFloat("_YoungStrength", 0.5f);
+            }
             if (m31Volume != null && m31Volume.HasProperty(DustId))
                 m31DustInitial = m31Volume.GetFloat(DustId);
+            SpawnCompanions();
 
             // The clone's star field rebuilt its own mesh in OnEnable; give the
             // freshly built child the instanced material too.
@@ -452,12 +480,77 @@ namespace MilkyWay
             }
         }
 
+        // ---------------- companions: M32 and M110 ----------------
+        // The two dwarf ellipticals every photograph of Andromeda carries —
+        // instantly identifying, and half of why M31 stops looking like a
+        // mirrored Milky Way.
+
+        Transform compM32, compM110;
+        Material compMatM32, compMatM110;
+        Texture2D compTex;
+
+        void SpawnCompanions()
+        {
+            if (andromeda == null || compM32 != null) return;
+            compTex = new Texture2D(64, 64, TextureFormat.RGBA32, false);
+            for (int y = 0; y < 64; y++)
+                for (int x = 0; x < 64; x++)
+                {
+                    float dx = (x - 31.5f) / 30f, dy = (y - 31.5f) / 30f;
+                    float g = Mathf.Exp(-(dx * dx + dy * dy) * 4.5f);
+                    compTex.SetPixel(x, y, new Color(1f, 1f, 1f, Mathf.Clamp01(g)));
+                }
+            compTex.Apply();
+
+            compMatM32 = new Material(Shader.Find("Sprites/Default"))
+                { mainTexture = compTex, color = new Color(1f, 0.93f, 0.80f, 0.9f), renderQueue = 3060 };
+            compMatM110 = new Material(Shader.Find("Sprites/Default"))
+                { mainTexture = compTex, color = new Color(0.95f, 0.90f, 0.82f, 0.55f), renderQueue = 3060 };
+
+            compM32 = MakeCompanion("M32", new Vector3(5.5f, -1.6f, 2.2f), new Vector3(1.6f, 1.4f, 1f), compMatM32);
+            compM110 = MakeCompanion("M110", new Vector3(-8.5f, 3.4f, -3.5f), new Vector3(3.1f, 1.5f, 1f), compMatM110);
+        }
+
+        Transform MakeCompanion(string name, Vector3 localPos, Vector3 scale, Material mat)
+        {
+            var go = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            Destroy(go.GetComponent<Collider>());
+            go.name = name;
+            go.transform.SetParent(andromeda.transform, false);
+            go.transform.localPosition = localPos;
+            go.transform.localScale = scale;
+            var mr = go.GetComponent<MeshRenderer>();
+            mr.sharedMaterial = mat;
+            mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            mr.receiveShadows = false;
+            return go.transform;
+        }
+
+        void UpdateCompanions(float keep)
+        {
+            // Billboards; they dissolve into the merger with their parent.
+            if (compM32 != null)
+            {
+                compM32.rotation = Quaternion.LookRotation(compM32.position - transform.position);
+                compMatM32.color = new Color(1f, 0.93f, 0.80f, 0.9f * keep);
+            }
+            if (compM110 != null)
+            {
+                compM110.rotation = Quaternion.LookRotation(compM110.position - transform.position);
+                compMatM110.color = new Color(0.95f, 0.90f, 0.82f, 0.55f * keep);
+            }
+        }
+
         void DestroyAndromeda()
         {
             if (andromeda != null) Destroy(andromeda);
             if (m31Volume != null) Destroy(m31Volume);
             if (m31Stars != null) Destroy(m31Stars);
+            if (compMatM32 != null) Destroy(compMatM32);
+            if (compMatM110 != null) Destroy(compMatM110);
+            if (compTex != null) Destroy(compTex);
             andromeda = null; m31Volume = null; m31Stars = null;
+            compM32 = null; compM110 = null; compMatM32 = null; compMatM110 = null; compTex = null;
         }
 
         // ---------------- UI ----------------
@@ -476,6 +569,49 @@ namespace MilkyWay
             float gyr = u * 5f;
             yearline.text = "<color=#9AA3B5>+" + (gyr * 10f).ToString("0.0")
                 + Loc.T("억 년", " hundred-million yr", "億年", "亿年") + "</color>";
+        }
+
+        /// <summary>Who is who: name tags floating over each galaxy while the
+        /// two are still separate bodies. They retire once the first pass
+        /// makes the question moot.</summary>
+        void UpdateTags(bool on)
+        {
+            if (tagMW == null)
+            {
+                if (!on) return;
+                var canvas = BlackHoleUI.EnsureCanvas(GetComponent<Camera>());
+                tagMW = BlackHoleUI.MakePanel(canvas.transform, "MW Tag",
+                    new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0f), Vector2.zero, new Vector2(250f, 40f),
+                    accentLine: false);
+                tagMWText = BlackHoleUI.MakeText(tagMW, "Text", 18, BlackHoleUI.TitleGold, TextAnchor.MiddleCenter,
+                    new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(240f, 30f), FontStyle.Bold);
+                tagM31 = BlackHoleUI.MakePanel(canvas.transform, "M31 Tag",
+                    new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0f), Vector2.zero, new Vector2(250f, 40f),
+                    accentLine: false);
+                tagM31Text = BlackHoleUI.MakeText(tagM31, "Text", 18, BlackHoleUI.TitleGold, TextAnchor.MiddleCenter,
+                    new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(240f, 30f), FontStyle.Bold);
+                tagMWText.text = Loc.T("우리은하 — 여기가 우리", "Milky Way — that's us",
+                    "天の川銀河 — 私たちはここ", "银河系——我们在这里");
+                tagM31Text.text = Loc.T("안드로메다 (M31)", "Andromeda (M31)",
+                    "アンドロメダ (M31)", "仙女座星系 (M31)");
+            }
+            var cam = GetComponent<Camera>();
+            PlaceTag(cam, tagMW, on, mw.position + Vector3.up * 14f);
+            PlaceTag(cam, tagM31, on && andromeda != null,
+                andromeda != null ? andromeda.transform.position + Vector3.up * 26f : Vector3.zero);
+        }
+
+        static void PlaceTag(Camera cam, RectTransform tag, bool on, Vector3 world)
+        {
+            if (tag == null) return;
+            if (!on || cam == null) { tag.gameObject.SetActive(false); return; }
+            Vector3 sp = cam.WorldToScreenPoint(world);
+            bool visible = sp.z > 0f;
+            tag.gameObject.SetActive(visible);
+            if (visible)
+                tag.anchoredPosition = new Vector2(
+                    sp.x / Screen.width * 1920f - 960f,
+                    sp.y / Screen.height * 1080f - 540f + 10f);
         }
 
         void ShowStop(bool on)

@@ -506,6 +506,13 @@ namespace BlackHoleEffect.Editor
             colorAdjust.saturation.Override(6f);
 
             AssetDatabase.CreateAsset(profile, profilePath);
+            // CreateAsset persists ONLY the profile object: every component
+            // profile.Add<>() made is its own ScriptableObject and silently
+            // vanishes on save unless attached as a subasset. (Found by a
+            // build review — all three exhibit profiles had shipped empty.)
+            foreach (var component in profile.components)
+                AssetDatabase.AddObjectToAsset(component, profile);
+            AssetDatabase.SaveAssets();
 
             var go = new GameObject("Post Processing (ACES + Bloom)");
             var volume = go.AddComponent<Volume>();
