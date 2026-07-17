@@ -122,6 +122,10 @@ namespace MilkyWay.Editor
             cosmic.orbit = orbit;
             cosmic.field = web;
 
+            // Solar-system tour (F6): spawns its own rig on demand.
+            var solTour = camGO.AddComponent<SolarSystemTour>();
+            solTour.orbit = orbit;
+
             var controls = camGO.AddComponent<MilkyWayControls>();
             controls.controller = controller;
             controls.orbit = orbit;
@@ -130,6 +134,7 @@ namespace MilkyWay.Editor
             controls.andromeda = m31;
             controls.tour = tour;
             controls.cosmicZoom = cosmic;
+            controls.solarTour = solTour;
 
             SetupPostProcessing();
 

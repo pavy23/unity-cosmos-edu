@@ -352,14 +352,19 @@ namespace MilkyWay
 
         void BuildSun()
         {
-            var sun = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            sun.name = "Sun";
-            Destroy(sun.GetComponent<Collider>());
+            // Same close-up-grade sphere as the planets: the primitive's
+            // silhouette reads polygonal when the Sun fills a tour frame.
+            // NOTE the unit-RADIUS mesh vs the primitive's 0.5 — the scale
+            // below is half the old primitive scale for the same world size.
+            var sun = new GameObject("Sun");
             sun.transform.SetParent(transform, false);
+            sun.AddComponent<MeshFilter>().sharedMesh = sphereMesh;
+            var sunMR = sun.AddComponent<MeshRenderer>();
+            sunMR.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             // Small enough that Mercury's mapped orbit clears it comfortably —
-            // with the √AU compression a 0.012 sun would swallow the inner
+            // with the √AU compression a bigger sun would swallow the inner
             // system.
-            sun.transform.localScale = Vector3.one * 0.007f;
+            sun.transform.localScale = Vector3.one * 0.0035f;
             var starShader = Shader.Find("BlackHole/StarSurface");
             if (starShader != null)
             {

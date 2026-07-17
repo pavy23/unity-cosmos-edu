@@ -25,13 +25,15 @@ namespace MilkyWay
         public AndromedaCollision andromeda;
         public MilkyWayTour tour;
         public CosmicZoomOut cosmicZoom;
+        public SolarSystemTour solarTour;
 
         bool AnyPlaying =>
             (journey != null && journey.IsPlaying) ||
             (nightSky != null && nightSky.IsPlaying) ||
             (andromeda != null && andromeda.IsPlaying) ||
             (tour != null && tour.Running) ||
-            (cosmicZoom != null && cosmicZoom.IsPlaying);
+            (cosmicZoom != null && cosmicZoom.IsPlaying) ||
+            (solarTour != null && solarTour.Running);
 
         float distance, yaw, pitch;
         GameObject helpBar;
@@ -71,12 +73,27 @@ namespace MilkyWay
                 if (tour.Running) tour.StopTour();
                 else if (!AnyPlaying) tour.StartTour();
             }
+            if (kb.f6Key.wasPressedThisFrame && solarTour != null)
+            {
+                if (solarTour.Running) solarTour.StopTour();
+                else if (!AnyPlaying) solarTour.StartTour();
+            }
             if (tour != null && tour.Running)
             {
                 if (kb.nKey.wasPressedThisFrame || kb.rightArrowKey.wasPressedThisFrame) tour.Next();
                 if (kb.bKey.wasPressedThisFrame || kb.leftArrowKey.wasPressedThisFrame) tour.Prev();
             }
-            if (kb.kKey.wasPressedThisFrame) { Loc.Cycle(); if (tour != null) tour.OnLanguageChanged(); }
+            if (solarTour != null && solarTour.Running)
+            {
+                if (kb.nKey.wasPressedThisFrame || kb.rightArrowKey.wasPressedThisFrame) solarTour.Next();
+                if (kb.bKey.wasPressedThisFrame || kb.leftArrowKey.wasPressedThisFrame) solarTour.Prev();
+            }
+            if (kb.kKey.wasPressedThisFrame)
+            {
+                Loc.Cycle();
+                if (tour != null) tour.OnLanguageChanged();
+                if (solarTour != null) solarTour.OnLanguageChanged();
+            }
             if (kb.hKey.wasPressedThisFrame) showHelp = !showHelp;
 #else
             if (Input.GetKeyDown(KeyCode.F1) && journey != null && !AnyPlaying) journey.Begin();
@@ -88,12 +105,27 @@ namespace MilkyWay
                 if (tour.Running) tour.StopTour();
                 else if (!AnyPlaying) tour.StartTour();
             }
+            if (Input.GetKeyDown(KeyCode.F6) && solarTour != null)
+            {
+                if (solarTour.Running) solarTour.StopTour();
+                else if (!AnyPlaying) solarTour.StartTour();
+            }
             if (tour != null && tour.Running)
             {
                 if (Input.GetKeyDown(KeyCode.N) || Input.GetKeyDown(KeyCode.RightArrow)) tour.Next();
                 if (Input.GetKeyDown(KeyCode.B) || Input.GetKeyDown(KeyCode.LeftArrow)) tour.Prev();
             }
-            if (Input.GetKeyDown(KeyCode.K)) { Loc.Cycle(); if (tour != null) tour.OnLanguageChanged(); }
+            if (solarTour != null && solarTour.Running)
+            {
+                if (Input.GetKeyDown(KeyCode.N) || Input.GetKeyDown(KeyCode.RightArrow)) solarTour.Next();
+                if (Input.GetKeyDown(KeyCode.B) || Input.GetKeyDown(KeyCode.LeftArrow)) solarTour.Prev();
+            }
+            if (Input.GetKeyDown(KeyCode.K))
+            {
+                Loc.Cycle();
+                if (tour != null) tour.OnLanguageChanged();
+                if (solarTour != null) solarTour.OnLanguageChanged();
+            }
             if (Input.GetKeyDown(KeyCode.H)) showHelp = !showHelp;
 #endif
         }
@@ -162,10 +194,10 @@ namespace MilkyWay
         {
             if (help == null) return;
             help.text = Loc.T(
-                Key("F1") + "줌 여행   " + Key("F2") + "밤하늘 연결   " + Key("F3") + "안드로메다 충돌   " + Key("F4") + "가이드 투어   " + Key("F5") + "우주 줌아웃   " + Key("우클릭") + "회전   " + Key("휠") + "줌   " + Key("K") + "언어   " + Key("H") + "도움말",
-                Key("F1") + "zoom journey   " + Key("F2") + "night-sky link   " + Key("F3") + "Andromeda   " + Key("F4") + "guided tour   " + Key("F5") + "cosmic zoom-out   " + Key("R-drag") + "orbit   " + Key("wheel") + "zoom   " + Key("K") + "language   " + Key("H") + "help",
-                Key("F1") + "ズームの旅   " + Key("F2") + "夜空とのつながり   " + Key("F3") + "アンドロメダ衝突   " + Key("F4") + "ガイドツアー   " + Key("F5") + "宇宙ズームアウト   " + Key("右ドラッグ") + "回転   " + Key("ホイール") + "ズーム   " + Key("K") + "言語   " + Key("H") + "ヘルプ",
-                Key("F1") + "缩放之旅   " + Key("F2") + "夜空的连接   " + Key("F3") + "仙女座相撞   " + Key("F4") + "导览之旅   " + Key("F5") + "宇宙缩放   " + Key("右键拖动") + "旋转   " + Key("滚轮") + "缩放   " + Key("K") + "语言   " + Key("H") + "帮助");
+                Key("F1") + "줌 여행   " + Key("F2") + "밤하늘   " + Key("F3") + "안드로메다   " + Key("F4") + "은하 투어   " + Key("F5") + "우주 줌아웃   " + Key("F6") + "태양계 투어   " + Key("우클릭") + "회전   " + Key("휠") + "줌   " + Key("K") + "언어   " + Key("H") + "도움말",
+                Key("F1") + "zoom journey   " + Key("F2") + "night sky   " + Key("F3") + "Andromeda   " + Key("F4") + "galaxy tour   " + Key("F5") + "cosmic zoom-out   " + Key("F6") + "solar system   " + Key("R-drag") + "orbit   " + Key("wheel") + "zoom   " + Key("K") + "language   " + Key("H") + "help",
+                Key("F1") + "ズームの旅   " + Key("F2") + "夜空   " + Key("F3") + "アンドロメダ   " + Key("F4") + "銀河ツアー   " + Key("F5") + "宇宙ズームアウト   " + Key("F6") + "太陽系ツアー   " + Key("右ドラッグ") + "回転   " + Key("ホイール") + "ズーム   " + Key("K") + "言語   " + Key("H") + "ヘルプ",
+                Key("F1") + "缩放之旅   " + Key("F2") + "夜空   " + Key("F3") + "仙女座   " + Key("F4") + "星系导览   " + Key("F5") + "宇宙缩放   " + Key("F6") + "太阳系之旅   " + Key("右键拖动") + "旋转   " + Key("滚轮") + "缩放   " + Key("K") + "语言   " + Key("H") + "帮助");
         }
     }
 }
