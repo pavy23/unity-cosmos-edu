@@ -35,6 +35,15 @@ Shader "MilkyWay/PlanetSurface"
         _Spot("Storm Spot", Range(0, 1)) = 0.0
         _SpotColor("Storm Spot Colour", Color) = (0.75, 0.35, 0.2, 1)
 
+        [Header(Atmosphere flow (gas giants))]
+        _FlowSpeed("Flow Speed (vortex cycles/sec)", Float) = 0.0
+        _FlowJets("Flow Jet Count", Float) = 8.0
+        _FlowShear("Flow Shear (longitude/sec)", Float) = 0.0
+        _FlowBase("Flow Base Drift (longitude/sec)", Float) = 0.0
+        _Vortex("Vortex Strength (radians)", Float) = 0.0
+        _VortexUV("Vortex Centre (u, v)", Vector) = (0.371, 0.385, 0, 0)
+        _VortexRadius("Vortex Radius (uv)", Float) = 0.055
+
         [Header(Lighting)]
         _SunPos("Sun Position (world)", Vector) = (0, 0, 0, 0)
         _Ambient("Ambient Floor", Range(0, 1)) = 0.12
@@ -64,6 +73,8 @@ Shader "MilkyWay/PlanetSurface"
                 float _Continents, _SeaLevel, _IceCap, _Clouds, _Spot;
                 float _Ambient, _Glow;
                 float _TexStrength, _UseCloudTex, _NightStrength;
+                float4 _VortexUV;
+                float _FlowSpeed, _FlowJets, _FlowShear, _FlowBase, _Vortex, _VortexRadius;
             CBUFFER_END
 
             TEXTURE2D(_MainTex);  SAMPLER(sampler_MainTex);
@@ -84,6 +95,30 @@ Shader "MilkyWay/PlanetSurface"
                 float uB = frac(lon + lonOffset + 0.5) - 0.5;
                 float2 uv = fwidth(uA) <= fwidth(uB) ? float2(uA, v) : float2(uB, v);
                 return SAMPLE_TEXTURE2D(tex, samp, uv).rgb;
+            }
+
+            // Seam-safe sample from an UNBOUNDED longitude coordinate — same
+            // two-candidate fwidth trick as SampleEquirect, needed here too
+            // because the flow offset makes the wrap point drift across the
+            // planet (a moving one-pixel mud column otherwise).
+            half3 SampleLonV(TEXTURE2D_PARAM(tex, samp), float2 lv)
+            {
+                float uA = frac(lv.x);
+                float uB = frac(lv.x + 0.5) - 0.5;
+                float2 uv = fwidth(uA) <= fwidth(uB) ? float2(uA, lv.y) : float2(uB, lv.y);
+                return SAMPLE_TEXTURE2D(tex, samp, uv).rgb;
+            }
+
+            // Rotate (lon, v) around the vortex centre, falling off smoothly
+            // to zero at the radius — the Great Red Spot's swirl.
+            float2 Swirl(float2 p, float2 c, float ang)
+            {
+                float2 d = p - c;
+                d.x -= round(d.x); // shortest way around the longitude wrap
+                float r = saturate(1.0 - length(d) / max(_VortexRadius, 1e-4));
+                float a = ang * r * r * (3.0 - 2.0 * r);
+                float cs = cos(a), sn = sin(a);
+                return c + float2(d.x * cs - d.y * sn, d.x * sn + d.y * cs);
             }
 
             float pl_hash(float3 p)
@@ -194,7 +229,48 @@ Shader "MilkyWay/PlanetSurface"
                 // above (bands, mottling, continents, ice, storms are all in
                 // the photograph already); clouds and lighting still apply.
                 if (_TexStrength > 0.001)
-                    col = lerp(col, SampleEquirect(TEXTURE2D_ARGS(_MainTex, sampler_MainTex), os, 0.0), _TexStrength);
+                {
+                    half3 mapCol;
+                    if (_FlowSpeed > 0.0001)
+                    {
+                        // The atmosphere MOVES — but a photograph cannot be
+                        // advected forever: unbounded differential shear
+                        // grinds every feature (the Red Spot first) into
+                        // smeared stripes within minutes. So all DISTORTING
+                        // motion (jet shear, vortex swirl) lives in two
+                        // half-phase samples that each displace only a few
+                        // seconds' worth before resetting at zero weight,
+                        // while the uniform base drift — which distorts
+                        // nothing — scrolls forever.
+                        float v = asin(clamp(os.y, -1.0, 1.0)) / 3.14159265 + 0.5;
+                        float lon = atan2(os.z, os.x) / 6.2831853;
+                        float baseLon = lon + _FlowBase * _Time.y;
+                        float shear = _FlowShear * sin(lat * _FlowJets * 3.14159);
+                        float latV = sin((_VortexUV.y - 0.5) * 3.14159);
+                        float shearV = _FlowShear * sin(latV * _FlowJets * 3.14159);
+
+                        float t = _Time.y * _FlowSpeed;
+                        float win = 1.0 / max(_FlowSpeed, 1e-3);
+                        float ph0 = frac(t) - 0.5, ph1 = frac(t + 0.5) - 0.5;
+
+                        float2 lv0 = float2(baseLon + shear * ph0 * win, v);
+                        float2 lv1 = float2(baseLon + shear * ph1 * win, v);
+                        if (_Vortex > 0.001)
+                        {
+                            // Each phase's swirl centre sits where the spot is
+                            // in THAT phase's displaced map.
+                            float vx = _VortexUV.x + _FlowBase * _Time.y;
+                            lv0 = Swirl(lv0, float2(vx + shearV * ph0 * win, _VortexUV.y), _Vortex * ph0);
+                            lv1 = Swirl(lv1, float2(vx + shearV * ph1 * win, _VortexUV.y), _Vortex * ph1);
+                        }
+                        half3 c0 = SampleLonV(TEXTURE2D_ARGS(_MainTex, sampler_MainTex), lv0);
+                        half3 c1 = SampleLonV(TEXTURE2D_ARGS(_MainTex, sampler_MainTex), lv1);
+                        mapCol = lerp(c0, c1, abs(ph0 * 2.0));
+                    }
+                    else
+                        mapCol = SampleEquirect(TEXTURE2D_ARGS(_MainTex, sampler_MainTex), os, 0.0);
+                    col = lerp(col, mapCol, _TexStrength);
+                }
 
                 // Clouds drift slowly relative to the surface.
                 if (_Clouds > 0.01)

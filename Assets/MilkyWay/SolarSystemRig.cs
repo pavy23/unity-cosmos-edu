@@ -181,6 +181,10 @@ namespace MilkyWay
                     m.SetFloat("_Clouds", 0.9f);
                     m.SetFloat("_NoiseScale", 4f);
                     m.SetColor("_RimColor", new Color(0.9f, 0.8f, 0.5f) * 0.35f);
+                    // Super-rotation: the whole cloud deck laps the planet —
+                    // uniform drift, no jets.
+                    m.SetFloat("_FlowSpeed", 0.05f);
+                    m.SetFloat("_FlowBase", 0.004f);
                 } },
             new BodyDef { name = "Earth", au = 1f, radiusEarths = 1f, tiltDeg = 23.4f, dayHours = 23.9f,
                 tex = "2k_earth_daymap", cloudTex = "2k_earth_clouds", nightTex = "2k_earth_nightmap",
@@ -226,6 +230,15 @@ namespace MilkyWay
                     m.SetFloat("_NoiseScale", 5f);
                     m.SetFloat("_Spot", 0.85f);
                     m.SetColor("_SpotColor", new Color(0.72f, 0.30f, 0.18f));
+                    // Belts and zones counter-flow; the Great Red Spot churns
+                    // in place (vortex centre measured off the actual map).
+                    m.SetFloat("_FlowSpeed", 0.09f);
+                    m.SetFloat("_FlowJets", 10f);
+                    m.SetFloat("_FlowShear", 0.010f);
+                    m.SetFloat("_FlowBase", 0.002f);
+                    m.SetFloat("_Vortex", 2.4f);
+                    m.SetVector("_VortexUV", new Vector4(0.371f, 0.385f, 0f, 0f));
+                    m.SetFloat("_VortexRadius", 0.058f);
                 } },
             new BodyDef { name = "Saturn", au = 9.54f, radiusEarths = 9.4f, tiltDeg = 26.7f, dayHours = 10.7f, tex = "2k_saturn",
                 moons = new[] { new MoonDef { name = "Titan", orbitPlanetRadii = 3.4f, sizeRel = 0.14f,
@@ -237,6 +250,10 @@ namespace MilkyWay
                     m.SetFloat("_BandWarp", 0.25f);
                     m.SetFloat("_Mottle", 0.08f);
                     m.SetFloat("_NoiseScale", 4f);
+                    m.SetFloat("_FlowSpeed", 0.07f);
+                    m.SetFloat("_FlowJets", 8f);
+                    m.SetFloat("_FlowShear", 0.007f);
+                    m.SetFloat("_FlowBase", 0.002f);
                 } },
             new BodyDef { name = "Uranus", au = 19.2f, radiusEarths = 4.0f, tiltDeg = 97.8f, dayHours = -17.2f, tex = "2k_uranus",
                 paint = m => {
@@ -246,6 +263,11 @@ namespace MilkyWay
                     m.SetFloat("_BandWarp", 0.15f);
                     m.SetFloat("_Mottle", 0.05f);
                     m.SetColor("_RimColor", new Color(0.5f, 0.8f, 0.85f) * 0.25f);
+                    // Nearly featureless — the faintest drift is honest.
+                    m.SetFloat("_FlowSpeed", 0.04f);
+                    m.SetFloat("_FlowJets", 4f);
+                    m.SetFloat("_FlowShear", 0.003f);
+                    m.SetFloat("_FlowBase", 0.0015f);
                 } },
             new BodyDef { name = "Neptune", au = 30.1f, radiusEarths = 3.9f, tiltDeg = 28.3f, dayHours = 16.1f, tex = "2k_neptune",
                 paint = m => {
@@ -257,6 +279,11 @@ namespace MilkyWay
                     m.SetFloat("_Spot", 0.4f);
                     m.SetColor("_SpotColor", new Color(0.85f, 0.9f, 1f));
                     m.SetColor("_RimColor", new Color(0.3f, 0.45f, 1f) * 0.35f);
+                    // The solar system's fastest winds.
+                    m.SetFloat("_FlowSpeed", 0.08f);
+                    m.SetFloat("_FlowJets", 5f);
+                    m.SetFloat("_FlowShear", 0.009f);
+                    m.SetFloat("_FlowBase", 0.003f);
                 } },
         };
 
