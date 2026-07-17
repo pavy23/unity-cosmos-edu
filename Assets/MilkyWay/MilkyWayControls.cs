@@ -26,6 +26,7 @@ namespace MilkyWay
         public MilkyWayTour tour;
         public CosmicZoomOut cosmicZoom;
         public SolarSystemTour solarTour;
+        public RotationCurveLab rotationLab;
 
         bool AnyPlaying =>
             (journey != null && journey.IsPlaying) ||
@@ -33,7 +34,8 @@ namespace MilkyWay
             (andromeda != null && andromeda.IsPlaying) ||
             (tour != null && tour.Running) ||
             (cosmicZoom != null && cosmicZoom.IsPlaying) ||
-            (solarTour != null && solarTour.Running);
+            (solarTour != null && solarTour.Running) ||
+            (rotationLab != null && rotationLab.IsPlaying);
 
         float distance, yaw, pitch;
         GameObject helpBar;
@@ -78,6 +80,11 @@ namespace MilkyWay
                 if (solarTour.Running) solarTour.StopTour();
                 else if (!AnyPlaying) solarTour.StartTour();
             }
+            if (kb.f7Key.wasPressedThisFrame && rotationLab != null)
+            {
+                if (rotationLab.IsPlaying) rotationLab.Abort();
+                else if (!AnyPlaying) rotationLab.Begin();
+            }
             if (tour != null && tour.Running)
             {
                 if (kb.nKey.wasPressedThisFrame || kb.rightArrowKey.wasPressedThisFrame) tour.Next();
@@ -109,6 +116,11 @@ namespace MilkyWay
             {
                 if (solarTour.Running) solarTour.StopTour();
                 else if (!AnyPlaying) solarTour.StartTour();
+            }
+            if (Input.GetKeyDown(KeyCode.F7) && rotationLab != null)
+            {
+                if (rotationLab.IsPlaying) rotationLab.Abort();
+                else if (!AnyPlaying) rotationLab.Begin();
             }
             if (tour != null && tour.Running)
             {
@@ -194,10 +206,10 @@ namespace MilkyWay
         {
             if (help == null) return;
             help.text = Loc.T(
-                Key("F1") + "줌 여행   " + Key("F2") + "밤하늘   " + Key("F3") + "안드로메다   " + Key("F4") + "은하 투어   " + Key("F5") + "우주 줌아웃   " + Key("F6") + "태양계 투어   " + Key("우클릭") + "회전   " + Key("휠") + "줌   " + Key("K") + "언어   " + Key("H") + "도움말",
-                Key("F1") + "zoom journey   " + Key("F2") + "night sky   " + Key("F3") + "Andromeda   " + Key("F4") + "galaxy tour   " + Key("F5") + "cosmic zoom-out   " + Key("F6") + "solar system   " + Key("R-drag") + "orbit   " + Key("wheel") + "zoom   " + Key("K") + "language   " + Key("H") + "help",
-                Key("F1") + "ズームの旅   " + Key("F2") + "夜空   " + Key("F3") + "アンドロメダ   " + Key("F4") + "銀河ツアー   " + Key("F5") + "宇宙ズームアウト   " + Key("F6") + "太陽系ツアー   " + Key("右ドラッグ") + "回転   " + Key("ホイール") + "ズーム   " + Key("K") + "言語   " + Key("H") + "ヘルプ",
-                Key("F1") + "缩放之旅   " + Key("F2") + "夜空   " + Key("F3") + "仙女座   " + Key("F4") + "星系导览   " + Key("F5") + "宇宙缩放   " + Key("F6") + "太阳系之旅   " + Key("右键拖动") + "旋转   " + Key("滚轮") + "缩放   " + Key("K") + "语言   " + Key("H") + "帮助");
+                Key("F1") + "줌 여행   " + Key("F2") + "밤하늘   " + Key("F3") + "안드로메다   " + Key("F4") + "은하 투어   " + Key("F5") + "우주 줌아웃   " + Key("F6") + "태양계 투어   " + Key("F7") + "회전 곡선   " + Key("우클릭") + "회전   " + Key("휠") + "줌   " + Key("K") + "언어   " + Key("H") + "도움말",
+                Key("F1") + "zoom journey   " + Key("F2") + "night sky   " + Key("F3") + "Andromeda   " + Key("F4") + "galaxy tour   " + Key("F5") + "cosmic zoom-out   " + Key("F6") + "solar system   " + Key("F7") + "rotation curve   " + Key("R-drag") + "orbit   " + Key("wheel") + "zoom   " + Key("K") + "language   " + Key("H") + "help",
+                Key("F1") + "ズームの旅   " + Key("F2") + "夜空   " + Key("F3") + "アンドロメダ   " + Key("F4") + "銀河ツアー   " + Key("F5") + "宇宙ズームアウト   " + Key("F6") + "太陽系ツアー   " + Key("F7") + "回転曲線   " + Key("右ドラッグ") + "回転   " + Key("ホイール") + "ズーム   " + Key("K") + "言語   " + Key("H") + "ヘルプ",
+                Key("F1") + "缩放之旅   " + Key("F2") + "夜空   " + Key("F3") + "仙女座   " + Key("F4") + "星系导览   " + Key("F5") + "宇宙缩放   " + Key("F6") + "太阳系之旅   " + Key("F7") + "旋转曲线   " + Key("右键拖动") + "旋转   " + Key("滚轮") + "缩放   " + Key("K") + "语言   " + Key("H") + "帮助");
         }
     }
 }

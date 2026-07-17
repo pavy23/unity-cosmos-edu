@@ -126,6 +126,11 @@ namespace MilkyWay.Editor
             var solTour = camGO.AddComponent<SolarSystemTour>();
             solTour.orbit = orbit;
 
+            // Rotation-curve lab (F7): the dark-matter evidence, interactive.
+            var rotLab = camGO.AddComponent<RotationCurveLab>();
+            rotLab.controller = controller;
+            rotLab.orbit = orbit;
+
             var controls = camGO.AddComponent<MilkyWayControls>();
             controls.controller = controller;
             controls.orbit = orbit;
@@ -135,6 +140,7 @@ namespace MilkyWay.Editor
             controls.tour = tour;
             controls.cosmicZoom = cosmic;
             controls.solarTour = solTour;
+            controls.rotationLab = rotLab;
 
             SetupPostProcessing();
 
