@@ -87,13 +87,16 @@ namespace BlackHoleEffect
         {
             var canvas = BlackHoleUI.EnsureCanvas(GetComponent<Camera>() ?? Camera.main);
 
+            // The 68px title glyphs overflow their box downward; give it room
+            // and seat the subtitle clear of that overflow (they used to
+            // collide at ~-205 px).
             title = BlackHoleUI.MakeText(canvas.transform, "Title", 68, BlackHoleUI.TitleGold,
                 TextAnchor.MiddleCenter, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
-                new Vector2(0f, -130f), new Vector2(1400f, 90f), FontStyle.Bold);
+                new Vector2(0f, -108f), new Vector2(1400f, 100f), FontStyle.Bold);
 
             subtitle = BlackHoleUI.MakeText(canvas.transform, "Subtitle", 24, BlackHoleUI.TextSecondary,
                 TextAnchor.MiddleCenter, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
-                new Vector2(0f, -196f), new Vector2(1400f, 36f));
+                new Vector2(0f, -226f), new Vector2(1400f, 36f));
 
             // Three experience cards, home outward: solar system → galaxy → hole.
             const float cardW = 430f, cardH = 330f, gap = 45f;
