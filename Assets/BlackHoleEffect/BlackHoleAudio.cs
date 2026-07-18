@@ -55,6 +55,9 @@ namespace BlackHoleEffect
         void Awake()
         {
             source = GetComponent<AudioSource>();
+            // WebGL can't run the procedural callback — leave the source
+            // clip-less there rather than warn and play silence.
+            if (!ProceduralAudio.Supported) return;
             var clip = AudioClip.Create("CosmicSoundscape", SampleRate, 2, SampleRate, true, OnRead);
             source.clip = clip;
             source.loop = true;
@@ -64,7 +67,7 @@ namespace BlackHoleEffect
 
         void Start()
         {
-            if (Application.isPlaying) source.Play();
+            if (Application.isPlaying && source.clip != null) source.Play();
         }
 
         void Update()

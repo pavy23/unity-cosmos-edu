@@ -250,7 +250,7 @@ namespace BlackHoleEffect
             mat.SetFloat(BinaryOnId, 1f);
 
             EnsureChirp();
-            chirpSource.Play();
+            if (chirpSource.clip != null) chirpSource.Play();
             EnsureFlash();   // created up front so it can swell during the final approach
 
             // --- Phase 1: slow inspiral while the story is told -----------
@@ -518,10 +518,12 @@ namespace BlackHoleEffect
         {
             if (chirpSource != null) return;
             chirpSource = gameObject.AddComponent<AudioSource>();
-            chirpSource.clip = AudioClip.Create("GWChirp", SampleRate, 1, SampleRate, true, OnChirpRead);
-            chirpSource.loop = true;
             chirpSource.spatialBlend = 0f;
             chirpSource.volume = 0.8f;
+            // WebGL can't run the procedural callback — no chirp there.
+            if (!ProceduralAudio.Supported) return;
+            chirpSource.clip = AudioClip.Create("GWChirp", SampleRate, 1, SampleRate, true, OnChirpRead);
+            chirpSource.loop = true;
         }
 
         void OnChirpRead(float[] data)

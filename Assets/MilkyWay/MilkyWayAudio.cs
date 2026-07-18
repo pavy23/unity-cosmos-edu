@@ -67,6 +67,9 @@ namespace MilkyWay
         void Awake()
         {
             source = GetComponent<AudioSource>();
+            // WebGL can't run the procedural callback — leave the source
+            // clip-less there rather than warn and play silence.
+            if (!BlackHoleEffect.ProceduralAudio.Supported) return;
             var clip = AudioClip.Create("GalacticSoundscape", SampleRate, 2, SampleRate, true, OnRead);
             source.clip = clip;
             source.loop = true;
@@ -76,7 +79,7 @@ namespace MilkyWay
 
         void Start()
         {
-            if (Application.isPlaying) source.Play();
+            if (Application.isPlaying && source.clip != null) source.Play();
         }
 
         void Update()
