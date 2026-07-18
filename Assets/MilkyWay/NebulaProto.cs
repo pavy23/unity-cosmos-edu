@@ -26,7 +26,7 @@ namespace MilkyWay
         public static readonly Preset[] Presets =
         {
             new Preset { name = "Emission (Orion)", type = 0f, brightness = 1.5f,
-                color1 = new Color(2.2f, 0.6f, 0.72f), color2 = new Color(0.4f, 1.5f, 1.2f),
+                color1 = new Color(2.3f, 0.5f, 0.85f), color2 = new Color(0.35f, 1.7f, 1.25f),
                 radius = 8f, density = 0.95f, noiseScale = 0.30f, filament = 1.7f,
                 threshold = 0.44f, dust = 1.5f, shellRadius = 0.6f, shellThickness = 0.14f },
             new Preset { name = "Reflection (Pleiades)", type = 1f, brightness = 2.0f,

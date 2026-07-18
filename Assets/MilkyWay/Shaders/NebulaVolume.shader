@@ -93,6 +93,20 @@ Shader "MilkyWay/NebulaVolume"
                 for (int o = 0; o < 5; o++) { sum += a * neb_vnoise(p); p *= 2.03; a *= 0.5; }
                 return sum; // ~0..1
             }
+            // Ridged fbm: sharp bright creases — the fine filaments and tendrils
+            // that make a real nebula read as gas rather than smoke.
+            float neb_ridged(float3 p)
+            {
+                float a = 0.5, sum = 0.0, prev = 1.0;
+                [unroll]
+                for (int o = 0; o < 4; o++)
+                {
+                    float n = 1.0 - abs(2.0 * neb_vnoise(p) - 1.0);
+                    n *= n; n *= prev; prev = n;
+                    sum += n * a; p *= 2.17; a *= 0.55;
+                }
+                return saturate(sum);
+            }
 
             // ---- the medium --------------------------------------------------
             void nebulaMedium(float3 p, out float3 emission, out float absorb)
@@ -104,26 +118,35 @@ Shader "MilkyWay/NebulaVolume"
                 float3 q = p * _NoiseScale;
                 // Domain warp for organic, filamentary structure.
                 float3 w = float3(neb_fbm(q + 11.3), neb_fbm(q - 7.1), neb_fbm(q + 3.7));
-                float d = neb_fbm(q + (w - 0.5) * _Filament);
+                float3 qw = q + (w - 0.5) * _Filament;
+                float base = neb_fbm(qw);
                 // Ragged silhouette: a low-frequency noise pushes the fade radius
                 // in and out so the cloud is not a clean ball.
                 float env = neb_fbm(q * 0.5 + 21.0);
                 float edge = smoothstep(1.0, 0.3, r + (env - 0.5) * 0.8);
-                // Contrast curve turns the soft field into wisps + dark lanes.
-                d = saturate((d - _Threshold) / (1.0 - _Threshold));
-                d = pow(d, 1.7) * edge * _Density;
+                // Contrast curve + fine ridged filaments = multi-scale gas.
+                base = saturate((base - _Threshold) / (1.0 - _Threshold));
+                float fine = neb_ridged(qw * 3.0 + 5.0);
+                float d = pow(base, 1.6) * (0.45 + 0.95 * fine) * edge * _Density;
 
                 if (_NebulaType < 0.5)
                 {
-                    // EMISSION: hot stars in the core ionize the gas — a warmer,
-                    // slightly brighter centre fading to pink Hα wisps, with teal
-                    // OIII only in the densest knots and dark dust lanes where the
-                    // contrast curve cut the field to zero.
-                    float ion = smoothstep(1.0, 0.15, r);
-                    float knot = saturate(d - 0.55);
-                    emission = (_Color1.rgb * (0.55 + 0.45 * ion)
-                                + _Color2.rgb * knot * 0.55) * d * _Brightness;
-                    absorb = d * _DustStrength;
+                    // EMISSION, modelled on the visible spectral lines: an OFFSET
+                    // hot core (like Orion's Trapezium) ionizes the gas into teal
+                    // OIII, fading through pink Hα to deep-red SII in the shielded
+                    // dusty clumps — which also extinct hardest, cutting dark lanes.
+                    float3 hot = float3(0.18, 0.12, 0.0) * _Radius;
+                    float ion = smoothstep(0.95, 0.0, length(p - hot) / _Radius);
+                    float dust = saturate(neb_fbm(qw * 1.6 - 3.0) * 1.7 - 0.55);
+
+                    float3 oiii = _Color2.rgb;                         // teal-green core
+                    float3 halpha = _Color1.rgb;                      // pink body
+                    float3 sii = _Color1.rgb * float3(0.72, 0.5, 0.5); // deep red (less brown)
+                    float3 c = lerp(halpha, oiii, saturate(ion * 1.6));
+                    c = lerp(c, sii, saturate(dust * 0.6));
+
+                    emission = c * d * (0.5 + 1.4 * ion) * _Brightness;
+                    absorb = (d + dust * _Density * 0.7) * _DustStrength;
                 }
                 else if (_NebulaType < 1.5)
                 {
@@ -145,6 +168,10 @@ Shader "MilkyWay/NebulaVolume"
                     float mixr = smoothstep(_ShellRadius - _ShellThickness,
                                             _ShellRadius + _ShellThickness, r);
                     emission = lerp(_Color2.rgb, _Color1.rgb, mixr) * dd * _Brightness;
+                    // Faint OIII haze filling the interior (M57's teal centre),
+                    // fading out past the ring; textured by the same gas.
+                    float interior = smoothstep(_ShellRadius + _ShellThickness, 0.0, r);
+                    emission += _Color2.rgb * interior * (0.12 + 0.35 * d) * _Brightness;
                     emission += float3(1.0, 0.95, 0.9) * 0.5 * exp(-r * r * 900.0) * _Brightness; // white dwarf
                     absorb = dd * _DustStrength * 0.4;
                 }

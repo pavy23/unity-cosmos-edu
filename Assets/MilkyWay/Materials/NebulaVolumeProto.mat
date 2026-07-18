@@ -25,19 +25,19 @@ Material:
     m_TexEnvs: []
     m_Ints: []
     m_Floats:
-    - _Brightness: 2.4
-    - _Density: 1
-    - _DustStrength: 1.2
-    - _Filament: 1.4
-    - _NebulaType: 0
-    - _NoiseScale: 0.32
-    - _Radius: 8
-    - _ShellRadius: 0.62
-    - _ShellThickness: 0.14
-    - _Steps: 72
-    - _Threshold: 0.42
+    - _Brightness: 0.5
+    - _Density: 0.9
+    - _DustStrength: 0.6
+    - _Filament: 0.8
+    - _NebulaType: 2
+    - _NoiseScale: 0.7
+    - _Radius: 5
+    - _ShellRadius: 0.6
+    - _ShellThickness: 0.05
+    - _Steps: 90
+    - _Threshold: 0.3
     m_Colors:
-    - _Color1: {r: 1, g: 0.35, b: 0.45, a: 1}
-    - _Color2: {r: 0.35, g: 0.9, b: 0.85, a: 1}
+    - _Color1: {r: 2.1, g: 0.55, b: 0.45, a: 1}
+    - _Color2: {r: 0.35, g: 1.7, b: 1.2, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
