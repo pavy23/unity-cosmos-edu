@@ -32,6 +32,10 @@ Shader "MilkyWay/NebulaVolume"
 
         [Header(Quality)]
         _Steps("March Steps", Range(24, 160)) = 72
+        // 1 = the cloud darkens what's behind it (a dark nebula silhouettes);
+        // 0 = purely additive, so it blends into a bright star-field background
+        // with no hard bounding-sphere edge (emission nebulae over the panorama).
+        _OccludeBg("Occlude Background", Range(0, 1)) = 1
     }
 
     SubShader
@@ -56,7 +60,7 @@ Shader "MilkyWay/NebulaVolume"
                 float4 _Color1, _Color2;
                 float _Radius, _Density, _NoiseScale, _Filament, _Threshold, _DustStrength;
                 float _ShellRadius, _ShellThickness;
-                float _Steps;
+                float _Steps, _OccludeBg;
             CBUFFER_END
 
             // ---- value noise + fbm -------------------------------------------
@@ -298,7 +302,7 @@ Shader "MilkyWay/NebulaVolume"
                     t += dt;
                 }
 
-                float occlusion = 1.0 - dot(trans, float3(0.333, 0.334, 0.333));
+                float occlusion = (1.0 - dot(trans, float3(0.333, 0.334, 0.333))) * _OccludeBg;
                 return half4(col, occlusion);
             }
             ENDHLSL

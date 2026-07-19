@@ -29,12 +29,22 @@ namespace MilkyWay.Editor
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             scene.name = "NebulaShowcase";
 
-            var skyShader = Shader.Find("MilkyWay/DeepSpaceSkybox");
+            // A REAL sky: the bundled ESO all-sky panorama as an equirect skybox.
+            // The gallery rotates it per specimen so each nebula sits against a
+            // different, genuine region of the Milky Way (dimmed so the emission
+            // volume still reads on top). Zero extra build cost — already in
+            // Resources for the night-sky experience.
+            var skyShader = Shader.Find("Skybox/Panoramic");
             if (skyShader != null)
             {
                 var sky = SaveMaterial("NebulaSkybox", skyShader);
-                sky.SetFloat("_StarDensity", 0.55f);
-                sky.SetFloat("_GalaxyCount", 0f);
+                var pano = AssetDatabase.LoadAssetAtPath<Texture>(
+                    "Assets/MilkyWay/Resources/NightProps/eso_milkyway_panorama.jpg");
+                if (pano != null) sky.SetTexture("_MainTex", pano);
+                sky.SetFloat("_Mapping", 1f);   // latitude-longitude
+                sky.SetFloat("_ImageType", 0f); // 360
+                sky.SetColor("_Tint", new Color(0.34f, 0.34f, 0.38f));
+                sky.SetFloat("_Exposure", 1f);
                 RenderSettings.skybox = sky;
             }
             RenderSettings.ambientMode = AmbientMode.Flat;

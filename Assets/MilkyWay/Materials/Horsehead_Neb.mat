@@ -31,6 +31,7 @@ Material:
     - _Filament: 1.3
     - _NebulaType: 4
     - _NoiseScale: 0.35
+    - _OccludeBg: 1
     - _Radius: 7
     - _ShellRadius: 0.6
     - _ShellThickness: 0.1

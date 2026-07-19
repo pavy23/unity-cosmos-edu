@@ -28,13 +28,11 @@ namespace MilkyWay
         Text cardTitle, cardFacts, cardBody, cardCount;
         Text prevLabel, nextLabel;
 
-        // Each specimen carries its own sky (the real setting it sits in — a dense
-        // Milky-Way star cloud for the in-plane nebulae, a sparse halo field with
-        // distant galaxies for the globular). We drive a private skybox instance
-        // and crossfade it as the camera glides between objects.
-        struct BgCfg { public float density, galaxies, band; public Color tint, bandColor; public Vector3 bandAxis; }
+        // Each specimen sits against a real region of the ESO Milky-Way panorama:
+        // we rotate the equirect skybox to that region and dim it to taste, so no
+        // two objects share the same background. Applied instantly per specimen
+        // (the view is static — no camera drift).
         Material skyMat;
-        BgCfg bgFrom, bgTo;
 
         void Start()
         {
@@ -72,25 +70,13 @@ namespace MilkyWay
             }
         }
 
-        BgCfg Cfg(int i)
-        {
-            var h = controller.Hero(i);
-            Color tint = h.bgTint.a > 0f || h.bgTint.maxColorComponent > 0f ? h.bgTint : Color.white;
-            Color bandCol = h.bgBandColor.maxColorComponent > 0f ? h.bgBandColor : new Color(0.5f, 0.4f, 0.32f);
-            Vector3 axis = h.bgBandAxis == Vector3.zero ? Vector3.up : h.bgBandAxis;
-            return new BgCfg { density = h.bgDensity, galaxies = h.bgGalaxies, band = h.bgBand,
-                               tint = tint, bandColor = bandCol, bandAxis = axis };
-        }
-
-        void ApplyBg(BgCfg a, BgCfg b, float u)
+        void ApplyBg(int i)
         {
             if (skyMat == null) return;
-            skyMat.SetFloat("_StarDensity", Mathf.Lerp(a.density, b.density, u));
-            skyMat.SetFloat("_GalaxyCount", Mathf.Lerp(a.galaxies, b.galaxies, u));
-            skyMat.SetFloat("_BandStrength", Mathf.Lerp(a.band, b.band, u));
-            skyMat.SetColor("_Tint", Color.Lerp(a.tint, b.tint, u));
-            skyMat.SetColor("_BandColor", Color.Lerp(a.bandColor, b.bandColor, u));
-            skyMat.SetVector("_BandAxis", Vector3.Slerp(a.bandAxis, b.bandAxis, u));
+            var h = controller.Hero(i);
+            Color tint = h.bgTint.maxColorComponent > 0f ? h.bgTint : new Color(0.34f, 0.34f, 0.38f);
+            skyMat.SetFloat("_Rotation", h.bgRotation);
+            skyMat.SetColor("_Tint", tint);
         }
 
         void OnDestroy() { Loc.Changed -= Refresh; }
@@ -149,10 +135,8 @@ namespace MilkyWay
             glideT = instant ? 1f : 0f;
             if (instant) { transform.position = toPos; transform.LookAt(toLook); curLook = toLook; }
 
-            // Crossfade the sky from wherever it is now to this specimen's setting.
-            bgFrom = index >= 0 && skyMat != null ? bgTo : Cfg(i);
-            bgTo = Cfg(i);
-            if (instant) { bgFrom = bgTo; ApplyBg(bgTo, bgTo, 1f); }
+            // Snap the sky to this specimen's region of the panorama.
+            ApplyBg(i);
 
             EnsureCard();
             Refresh();
@@ -172,13 +156,9 @@ namespace MilkyWay
             }
             else
             {
-                // Slow parallax drift around the framed object.
-                transform.RotateAround(toLook, Vector3.up, 1.4f * Time.deltaTime);
+                // Held static — no drift (each specimen is a clean, still view).
                 curLook = toLook;
             }
-
-            // Crossfade the background in step with the camera glide.
-            ApplyBg(bgFrom, bgTo, Mathf.SmoothStep(0f, 1f, glideT));
 
             if (tourActive) return;   // the tour owns navigation while it runs
 #if ENABLE_INPUT_SYSTEM

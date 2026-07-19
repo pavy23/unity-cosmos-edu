@@ -97,41 +97,23 @@ namespace BlackHoleEffect
             parts.Add(header.gameObject);
         }
 
-        // Vertical variant: a column of thumbnails hugging the right edge,
-        // vertically centred. Used where a wide bottom panel (the nebula gallery's
-        // fact card) would collide with a bottom-right horizontal row.
+        // Vertical variant: a column of thumbnails stacked in the BOTTOM-RIGHT
+        // corner, growing upward. Used where a wide bottom panel (the nebula
+        // gallery's fact card) would collide with a horizontal row but the corner
+        // itself is free.
         void BuildVertical()
         {
-            BlackHoleUI.EnsureCanvas(Camera.main);
             var canvas = BlackHoleUI.EnsureCanvas(Camera.main);
-            var anchor = new Vector2(1f, 0.5f);
-
+            var anchor = new Vector2(1f, 0f);   // bottom-right
             int n = dests.Length;
-            float stackH = n * CardH + (n - 1) * Gap;
-            float top = stackH * 0.5f;
+            const float HomeH = 30f;
 
-            // Header above the column.
-            var header = BlackHoleUI.MakeText(canvas.transform, "Nav Header", 13,
-                BlackHoleUI.TextSecondary, TextAnchor.LowerRight, anchor, anchor,
-                new Vector2(-Margin, top + 6f), new Vector2(360f, 20f));
-            System.Func<string> headerT = () => Loc.T("다른 전시로", "Other exhibits", "他の展示へ", "其他展区");
-            header.text = headerT();
-            localized.Add((header, headerT));
-            parts.Add(header.gameObject);
-
-            // Thumbnails top→bottom.
-            for (int i = 0; i < n; i++)
-            {
-                float cy = top - CardH * 0.5f - i * (CardH + Gap);
-                BuildCard(canvas.transform, dests[i], anchor, new Vector2(-Margin, cy));
-            }
-
-            // Home chip below the column.
+            // Home chip flush in the corner.
+            float cardsBottom = Margin;
             if (includeHome)
             {
-                float y = -top - 8f - 30f;
                 var home = BlackHoleUI.MakeButton(canvas.transform, "Nav Home", "",
-                    anchor, anchor, new Vector2(-Margin, y + 30f), new Vector2(CardW, 30f),
+                    anchor, anchor, new Vector2(-Margin, Margin), new Vector2(CardW, HomeH),
                     () => UnityEngine.SceneManagement.SceneManager.LoadScene("TitleScreen"));
                 var hlabel = home.GetComponentInChildren<Text>();
                 if (hlabel != null)
@@ -142,7 +124,25 @@ namespace BlackHoleEffect
                     hlabel.text = ht();
                 }
                 parts.Add(home.gameObject);
+                cardsBottom = Margin + HomeH + Gap;
             }
+
+            // Thumbnails stacked upward; dests[0] on top.
+            for (int i = 0; i < n; i++)
+            {
+                float yBottom = cardsBottom + (n - 1 - i) * (CardH + Gap);
+                BuildCard(canvas.transform, dests[i], anchor, new Vector2(-Margin, yBottom));
+            }
+
+            // Header above the top card.
+            float topY = cardsBottom + (n - 1) * (CardH + Gap) + CardH + 4f;
+            var header = BlackHoleUI.MakeText(canvas.transform, "Nav Header", 13,
+                BlackHoleUI.TextSecondary, TextAnchor.LowerRight, anchor, anchor,
+                new Vector2(-Margin, topY), new Vector2(360f, 20f));
+            System.Func<string> headerT = () => Loc.T("다른 전시로", "Other exhibits", "他の展示へ", "其他展区");
+            header.text = headerT();
+            localized.Add((header, headerT));
+            parts.Add(header.gameObject);
         }
 
         void BuildCard(Transform canvas, Dest dest, Vector2 anchor, Vector2 pos)
