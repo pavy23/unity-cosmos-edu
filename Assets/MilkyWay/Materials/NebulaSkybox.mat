@@ -25,8 +25,12 @@ Material:
     m_TexEnvs: []
     m_Ints: []
     m_Floats:
+    - _BandStrength: 0
     - _GalaxyCount: 0
     - _StarDensity: 0.55
-    m_Colors: []
+    m_Colors:
+    - _BandAxis: {r: 0, g: 1, b: 0, a: 0}
+    - _BandColor: {r: 0.5, g: 0.42, b: 0.34, a: 1}
+    - _Tint: {r: 1, g: 1, b: 1, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

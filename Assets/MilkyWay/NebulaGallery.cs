@@ -25,14 +25,50 @@ namespace MilkyWay
         Text cardTitle, cardFacts, cardBody, cardCount;
         Text prevLabel, nextLabel;
 
+        // Each specimen carries its own sky (the real setting it sits in — a dense
+        // Milky-Way star cloud for the in-plane nebulae, a sparse halo field with
+        // distant galaxies for the globular). We drive a private skybox instance
+        // and crossfade it as the camera glides between objects.
+        struct BgCfg { public float density, galaxies, band; public Color tint, bandColor; public Vector3 bandAxis; }
+        Material skyMat;
+        BgCfg bgFrom, bgTo;
+
         void Start()
         {
             if (controller == null || controller.Count == 0) return;
             if (orbit != null) orbit.enabled = false;
+            // Instance the skybox so we never write specimen params into the shared
+            // asset (the StarfieldSkybox drift lesson).
+            if (RenderSettings.skybox != null)
+            {
+                skyMat = new Material(RenderSettings.skybox);
+                RenderSettings.skybox = skyMat;
+            }
             LanguageSelect.CreateWidget();
             BuildNav();
             Loc.Changed -= Refresh; Loc.Changed += Refresh;
             Frame(0, instant: true);
+        }
+
+        BgCfg Cfg(int i)
+        {
+            var h = controller.Hero(i);
+            Color tint = h.bgTint.a > 0f || h.bgTint.maxColorComponent > 0f ? h.bgTint : Color.white;
+            Color bandCol = h.bgBandColor.maxColorComponent > 0f ? h.bgBandColor : new Color(0.5f, 0.4f, 0.32f);
+            Vector3 axis = h.bgBandAxis == Vector3.zero ? Vector3.up : h.bgBandAxis;
+            return new BgCfg { density = h.bgDensity, galaxies = h.bgGalaxies, band = h.bgBand,
+                               tint = tint, bandColor = bandCol, bandAxis = axis };
+        }
+
+        void ApplyBg(BgCfg a, BgCfg b, float u)
+        {
+            if (skyMat == null) return;
+            skyMat.SetFloat("_StarDensity", Mathf.Lerp(a.density, b.density, u));
+            skyMat.SetFloat("_GalaxyCount", Mathf.Lerp(a.galaxies, b.galaxies, u));
+            skyMat.SetFloat("_BandStrength", Mathf.Lerp(a.band, b.band, u));
+            skyMat.SetColor("_Tint", Color.Lerp(a.tint, b.tint, u));
+            skyMat.SetColor("_BandColor", Color.Lerp(a.bandColor, b.bandColor, u));
+            skyMat.SetVector("_BandAxis", Vector3.Slerp(a.bandAxis, b.bandAxis, u));
         }
 
         void OnDestroy() { Loc.Changed -= Refresh; }
@@ -78,6 +114,11 @@ namespace MilkyWay
             glideT = instant ? 1f : 0f;
             if (instant) { transform.position = toPos; transform.LookAt(toLook); curLook = toLook; }
 
+            // Crossfade the sky from wherever it is now to this specimen's setting.
+            bgFrom = index >= 0 && skyMat != null ? bgTo : Cfg(i);
+            bgTo = Cfg(i);
+            if (instant) { bgFrom = bgTo; ApplyBg(bgTo, bgTo, 1f); }
+
             EnsureCard();
             Refresh();
         }
@@ -100,6 +141,9 @@ namespace MilkyWay
                 transform.RotateAround(toLook, Vector3.up, 1.4f * Time.deltaTime);
                 curLook = toLook;
             }
+
+            // Crossfade the background in step with the camera glide.
+            ApplyBg(bgFrom, bgTo, Mathf.SmoothStep(0f, 1f, glideT));
 
 #if ENABLE_INPUT_SYSTEM
             var kb = UnityEngine.InputSystem.Keyboard.current;

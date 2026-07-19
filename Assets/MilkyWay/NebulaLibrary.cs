@@ -39,6 +39,14 @@ namespace MilkyWay
             public int clusterStars;
             public float clusterRadius;
 
+            // --- per-specimen background (the sky this object really sits in) ---
+            public float bgDensity;     // point-star density
+            public float bgGalaxies;    // distant-galaxy smudges (halo objects)
+            public Color bgTint;        // star colour cast (zero => white)
+            public float bgBand;        // Milky-Way band strength (in-plane only)
+            public Color bgBandColor;
+            public Vector3 bgBandAxis;  // band pole (band = the perpendicular circle)
+
             // --- label ---
             public System.Func<string> name, facts, blurb;
         }
@@ -53,6 +61,10 @@ namespace MilkyWay
                 threshold = 0.44f, dust = 1.5f,
                 starBright = new Color(0.75f, 1.15f, 1.35f), starField = new Color(1.2f, 1.05f, 0.95f),
                 brightN = 5, fieldN = 70, coreFrac = 0.16f,
+                // In the winter Milky Way: a dense, warm star field (a smooth band
+                // would fishbowl the nebula's bounding sphere, so richness comes
+                // from stars, not glow).
+                bgDensity = 0.9f, bgGalaxies = 0f, bgTint = new Color(1.0f, 0.95f, 0.88f), bgBand = 0f,
                 name = () => Loc.T("오리온 대성운 (M42)", "The Orion Nebula (M42)", "オリオン大星雲 (M42)", "猎户座大星云 (M42)"),
                 facts = () => Loc.T("발광성운 · 1,344광년 · 지름 24광년 · 별이 태어나는 곳",
                                     "Emission nebula · 1,344 ly · 24 ly across · a stellar nursery",
@@ -70,6 +82,7 @@ namespace MilkyWay
                 brightness = 1.0f, radius = 7f, density = 1.9f, noiseScale = 0.35f, filament = 1.3f,
                 threshold = 0.4f, dust = 3.0f, backdrop = true,
                 starBright = Color.white, starField = Color.white, brightN = 0, fieldN = 0, coreFrac = 1f,
+                bgDensity = 0.9f, bgGalaxies = 0f, bgTint = new Color(1.0f, 0.94f, 0.86f), bgBand = 0f,
                 name = () => Loc.T("말머리 성운 (B33)", "The Horsehead Nebula (B33)", "馬頭星雲 (B33)", "马头星云 (B33)"),
                 facts = () => Loc.T("암흑성운 · 1,375광년 · 붉은 성운 앞의 먼지 실루엣",
                                     "Dark nebula · 1,375 ly · a dust silhouette against red glow",
@@ -88,6 +101,7 @@ namespace MilkyWay
                 threshold = 0.6f, dust = 0.8f,
                 starBright = new Color(0.8f, 0.95f, 1.5f), starField = new Color(0.85f, 0.95f, 1.3f),
                 brightN = 10, fieldN = 40, coreFrac = 0.6f,
+                bgDensity = 0.5f, bgGalaxies = 0f, bgTint = new Color(0.85f, 0.9f, 1.05f), bgBand = 0f,
                 name = () => Loc.T("플레이아데스 (M45)", "The Pleiades (M45)", "プレアデス星団 (M45)", "昴星团 (M45)"),
                 facts = () => Loc.T("반사성운 + 산개성단 · 444광년 · 1억 살 · 별 약 1,000개",
                                     "Reflection nebula + open cluster · 444 ly · 100 Myr · ~1,000 stars",
@@ -107,6 +121,7 @@ namespace MilkyWay
                 stretch = new Vector3(1.12f, 0.9f, 1.0f),
                 starBright = new Color(0.9f, 0.95f, 1.1f), starField = new Color(0.9f, 0.9f, 1.0f),
                 brightN = 0, fieldN = 22, coreFrac = 1.6f,
+                bgDensity = 0.35f, bgGalaxies = 0.1f, bgTint = new Color(0.95f, 0.95f, 1.0f), bgBand = 0f,
                 name = () => Loc.T("고리 성운 (M57)", "The Ring Nebula (M57)", "環状星雲 (M57)", "环状星云 (M57)"),
                 facts = () => Loc.T("행성상성운 · 2,570광년 · 지름 1광년 · 태양 같은 별의 죽음",
                                     "Planetary nebula · 2,570 ly · 1 ly across · a Sun-like star's death",
@@ -125,6 +140,7 @@ namespace MilkyWay
                 threshold = 0.3f, dust = 0.6f, shellRadius = 0.55f, shellThickness = 0.2f,
                 starBright = new Color(0.9f, 0.95f, 1.1f), starField = new Color(0.9f, 0.92f, 1.0f),
                 brightN = 0, fieldN = 26, coreFrac = 1.5f,
+                bgDensity = 0.3f, bgGalaxies = 0.5f, bgTint = new Color(0.92f, 0.94f, 1.0f), bgBand = 0f,
                 name = () => Loc.T("나선 성운 (NGC 7293)", "The Helix Nebula (NGC 7293)", "らせん星雲 (NGC 7293)", "螺旋星云 (NGC 7293)"),
                 facts = () => Loc.T("행성상성운 · 655광년 · 가장 가까운 행성상성운의 하나 · ‘신의 눈’",
                                     "Planetary nebula · 655 ly · one of the nearest · the 'Eye of God'",
@@ -143,6 +159,7 @@ namespace MilkyWay
                 threshold = 0.35f, dust = 0.5f, stretch = new Vector3(1.35f, 0.82f, 1.0f),
                 starBright = new Color(0.7f, 0.85f, 1.3f), starField = new Color(1.1f, 1.0f, 0.95f),
                 brightN = 1, fieldN = 40, coreFrac = 0.06f,
+                bgDensity = 0.85f, bgGalaxies = 0f, bgTint = new Color(0.96f, 0.93f, 0.88f), bgBand = 0f,
                 name = () => Loc.T("게 성운 (M1)", "The Crab Nebula (M1)", "かに星雲 (M1)", "蟹状星云 (M1)"),
                 facts = () => Loc.T("초신성 잔해 · 6,500광년 · 1054년 폭발 기록 · 중심에 펄서",
                                     "Supernova remnant · 6,500 ly · seen exploding in 1054 · a pulsar within",
@@ -157,6 +174,7 @@ namespace MilkyWay
             new Hero {
                 id = "OmegaCen", form = Form.Cluster, position = new Vector3(56, 12, 18), framing = 3.4f,
                 clusterKind = ClusterField.Kind.Globular, clusterStars = 6000, clusterRadius = 8f,
+                bgDensity = 0.35f, bgGalaxies = 0.55f, bgTint = new Color(0.95f, 0.96f, 1.0f), bgBand = 0f,
                 name = () => Loc.T("오메가 센타우리", "Omega Centauri", "オメガ星団", "半人马座ω星团"),
                 facts = () => Loc.T("구상성단 · 17,000광년 · 120억 살 · 별 약 1,000만 개",
                                     "Globular cluster · 17,000 ly · 12 Gyr old · ~10 million stars",
