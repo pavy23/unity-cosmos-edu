@@ -21,34 +21,26 @@ namespace MilkyWay.Editor
         const string Root = "Assets/MilkyWay";
         const string ScenePath = Root + "/Scenes/SolarSystemShowcase.unity";
 
-        const string PanoramaPath = Root + "/Resources/NightProps/eso_milkyway_panorama.jpg";
-
         [MenuItem("Tools/Solar System/Create Showcase Scene")]
         public static void Build()
         {
-            var skyShader = Shader.Find("Skybox/Panoramic");
+            var skyShader = Shader.Find("BlackHole/StarfieldSkybox");
             if (!skyShader)
             {
-                Debug.LogError("Skybox/Panoramic shader not found.");
+                Debug.LogError("BlackHole/StarfieldSkybox not compiled yet — try again after the import finishes.");
                 return;
             }
 
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             scene.name = "SolarSystemShowcase";
 
-            // A REAL sky: standing next to the Sun, the background IS the Milky
-            // Way. The bundled ESO all-sky panorama (already in Resources for the
-            // night-sky experience — zero extra build cost) becomes an equirect
-            // skybox, dimmed a little and rotated so the bright galactic bulge sits
-            // off to one side rather than washing out the planets on display.
+            // Our own material instance of the black-hole skybox (never the
+            // shared BH .mat — its experiences boost that asset's values).
             var sky = SaveMaterial("SolarSkybox", skyShader);
-            var pano = AssetDatabase.LoadAssetAtPath<Texture>(PanoramaPath);
-            if (pano != null) sky.SetTexture("_MainTex", pano);
-            sky.SetFloat("_Mapping", 1f);       // latitude-longitude layout
-            sky.SetFloat("_ImageType", 0f);     // 360°
-            sky.SetColor("_Tint", new Color(0.5f, 0.5f, 0.54f)); // dim so planets read
-            sky.SetFloat("_Exposure", 1.0f);
-            sky.SetFloat("_Rotation", 210f);
+            // Hide the Milky-Way band: from inside the solar system the distant
+            // galaxy is a distraction from the planets on display. Keep the
+            // plain starfield (density/nebula) as the backdrop.
+            sky.SetFloat("_BandStrength", 0f);
             RenderSettings.skybox = sky;
             RenderSettings.ambientMode = AmbientMode.Flat;
             RenderSettings.ambientLight = Color.black;
