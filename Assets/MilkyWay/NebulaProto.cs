@@ -38,6 +38,14 @@ namespace MilkyWay
                 color1 = new Color(2.1f, 0.55f, 0.45f), color2 = new Color(0.35f, 1.7f, 1.2f),
                 radius = 5f, density = 0.9f, noiseScale = 0.7f, filament = 0.8f,
                 threshold = 0.3f, dust = 0.6f, shellRadius = 0.6f, shellThickness = 0.05f },
+            new Preset { name = "Supernova Remnant (Crab)", type = 3f, brightness = 1.0f,
+                color1 = new Color(2.2f, 0.4f, 0.4f), color2 = new Color(0.4f, 1.6f, 1.1f),
+                radius = 7f, density = 1.0f, noiseScale = 0.5f, filament = 1.5f,
+                threshold = 0.35f, dust = 0.5f, shellRadius = 0.6f, shellThickness = 0.1f },
+            new Preset { name = "Dark Nebula (Horsehead)", type = 4f, brightness = 1.0f,
+                color1 = new Color(0.9f, 0.55f, 0.4f), color2 = new Color(0.4f, 0.5f, 0.7f),
+                radius = 7f, density = 1.2f, noiseScale = 0.35f, filament = 1.3f,
+                threshold = 0.4f, dust = 1.5f, shellRadius = 0.6f, shellThickness = 0.1f },
         };
 
         int index = -1;
@@ -91,6 +99,11 @@ namespace MilkyWay
             else if (i == 1) // Pleiades reflection: bright blue giants spread wide
                 stars.Configure(new Color(0.8f, 0.95f, 1.5f), new Color(0.85f, 0.95f, 1.3f),
                                 8, 45, p.radius, p.radius * 0.55f);
+            else if (i == 3) // SNR: a lone central pulsar + a sparse field
+                stars.Configure(new Color(0.7f, 0.85f, 1.3f), new Color(1.1f, 1.0f, 0.95f),
+                                1, 40, p.radius, p.radius * 0.06f);
+            else if (i == 4) // dark nebula: NO embedded stars — it hides the ones behind
+                stars.Configure(Color.white, Color.white, 0, 0, p.radius, p.radius);
             else // planetary: the white dwarf is in the shader; a few faint field stars
                 stars.Configure(new Color(0.9f, 0.95f, 1.1f), new Color(0.9f, 0.9f, 1.0f),
                                 0, 22, p.radius * 1.6f, p.radius);

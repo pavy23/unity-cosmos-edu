@@ -11,7 +11,7 @@ Shader "MilkyWay/NebulaVolume"
     Properties
     {
         [Header(Type)]
-        _NebulaType("Type (0 emit 1 refl 2 planetary)", Range(0, 2)) = 0
+        _NebulaType("Type (0 emit 1 refl 2 plan 3 snr 4 dark)", Range(0, 4)) = 0
 
         [Header(Light)]
         _Brightness("Brightness", Range(0.0, 8.0)) = 2.4
@@ -156,7 +156,7 @@ Shader "MilkyWay/NebulaVolume"
                     emission = _Color1.rgb * d * lit * _Brightness;
                     absorb = d * _DustStrength * 0.3;
                 }
-                else
+                else if (_NebulaType < 2.5)
                 {
                     // PLANETARY: a thin shell reads as a limb-brightened RING in
                     // projection — a ray grazing the shell tangentially picks up
@@ -174,6 +174,32 @@ Shader "MilkyWay/NebulaVolume"
                     emission += _Color2.rgb * interior * (0.12 + 0.35 * d) * _Brightness;
                     emission += float3(1.0, 0.95, 0.9) * 0.5 * exp(-r * r * 900.0) * _Brightness; // white dwarf
                     absorb = dd * _DustStrength * 0.4;
+                }
+                else if (_NebulaType < 3.5)
+                {
+                    // SUPERNOVA REMNANT: a tangled cage of thin filaments (the shock
+                    // front), red SII/Hα crossed with teal OIII, over a faint blue
+                    // synchrotron haze from the core (the Crab's pulsar wind). Sharp
+                    // ridged noise, not smooth cloud — it reads as shredded gas.
+                    float web = neb_ridged(qw * 2.3 + 8.0);
+                    float shellish = smoothstep(1.0, 0.1, r) * (0.3 + 0.7 * d);
+                    float fil = pow(web, 2.6) * shellish;
+                    float3 filColor = lerp(_Color1.rgb, _Color2.rgb, saturate(web * 1.4));
+                    emission = filColor * fil * _Brightness * 3.5;
+                    // A faint, TIGHT blue synchrotron glow at the very core, not a
+                    // haze that fills the shell.
+                    emission += float3(0.5, 0.7, 1.0) * exp(-r * r * 9.0) * 0.12 * _Brightness;
+                    absorb = fil * _DustStrength * 0.35;
+                }
+                else
+                {
+                    // DARK NEBULA: opaque dust, next to no emission — it reads as a
+                    // silhouette by BLOCKING the stars and glow behind it (the
+                    // occlusion alpha). A clumpy, defined body, not a wisp; a faint
+                    // browned rim where background light grazes its edge.
+                    float body = pow(base, 1.1) * edge * _Density;
+                    absorb = body * _DustStrength * 3.5;
+                    emission = _Color1.rgb * body * 0.03 * _Brightness; // barely-lit rim
                 }
             }
 
