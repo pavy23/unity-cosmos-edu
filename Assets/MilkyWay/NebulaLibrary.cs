@@ -73,8 +73,8 @@ namespace MilkyWay
             new Hero {
                 id = "Horsehead", form = Form.Nebula, position = new Vector3(42, 4, -8), framing = 4.6f,
                 type = 4, color1 = new Color(0.9f, 0.55f, 0.4f), color2 = new Color(0.4f, 0.5f, 0.7f),
-                brightness = 1.0f, radius = 7f, density = 1.9f, noiseScale = 0.35f, filament = 1.3f,
-                threshold = 0.4f, dust = 3.0f, backdrop = true,
+                brightness = 1.0f, radius = 7f, density = 2.3f, noiseScale = 0.35f, filament = 1.3f,
+                threshold = 0.38f, dust = 4.2f, backdrop = true,
                 starBright = Color.white, starField = Color.white, brightN = 0, fieldN = 0, coreFrac = 1f,
                 bgRotation = 70f, bgTint = new Color(0.38f, 0.35f, 0.32f),
                 name = () => Loc.T("말머리 성운 (B33)", "The Horsehead Nebula (B33)", "馬頭星雲 (B33)", "马头星云 (B33)"),
@@ -126,26 +126,7 @@ namespace MilkyWay
                                     "太陽ほどの星が迎える穏やかな最期。燃料が尽きた星が外層をそっと脱ぎ捨てて環状に膨らみ、残った高温の核 — 白色矮星 — がその殻を照らします。名前とは裏腹に、惑星とは無関係です。",
                                     "类太阳恒星平静的终结。燃料耗尽的恒星轻轻抛出外层，膨胀成一个环，残余的炽热核心——白矮星——点亮了这层壳。尽管名为“行星状”，却与行星毫无关系。") },
 
-            // 5) Helix Nebula — a nearer, broader planetary ("the Eye of God")
-            new Hero {
-                id = "Helix", form = Form.Nebula, position = new Vector3(8, 30, 40), framing = 3.3f,
-                type = 2, color1 = new Color(2.0f, 0.55f, 0.6f), color2 = new Color(0.4f, 1.45f, 1.4f),
-                brightness = 0.95f, radius = 6.5f, density = 0.9f, noiseScale = 0.6f, filament = 0.9f,
-                threshold = 0.3f, dust = 0.6f, shellRadius = 0.55f, shellThickness = 0.2f,
-                starBright = new Color(0.9f, 0.95f, 1.1f), starField = new Color(0.9f, 0.92f, 1.0f),
-                brightN = 0, fieldN = 26, coreFrac = 1.5f,
-                bgRotation = 220f, bgTint = new Color(0.34f, 0.36f, 0.42f),
-                name = () => Loc.T("나선 성운 (NGC 7293)", "The Helix Nebula (NGC 7293)", "らせん星雲 (NGC 7293)", "螺旋星云 (NGC 7293)"),
-                facts = () => Loc.T("행성상성운 · 655광년 · 가장 가까운 행성상성운의 하나 · ‘신의 눈’",
-                                    "Planetary nebula · 655 ly · one of the nearest · the 'Eye of God'",
-                                    "惑星状星雲 · 655光年 · 最も近い惑星状星雲の一つ · 「神の目」",
-                                    "行星状星云 · 655光年 · 最近的行星状星云之一 · “上帝之眼”"),
-                blurb = () => Loc.T("고리 성운과 같은 태양의 최후를, 훨씬 가까이서 정면으로 들여다본 모습. 안쪽 푸른 고리는 산소, 바깥 붉은 테두리는 수소와 질소입니다. 고리 안쪽 가장자리를 향한 수천 개의 ‘혜성 매듭’ — 각각 태양계만 한 가스 덩어리 — 이 이 성운의 특징입니다.",
-                                    "The same Sun's-end story as the Ring Nebula, seen much closer and face-on. The inner blue ring is oxygen, the outer red rim hydrogen and nitrogen. Thousands of 'cometary knots' — each a gas clump the size of our solar system — point in toward the ring's inner edge.",
-                                    "環状星雲と同じ太陽の最期を、はるかに近くから正面で覗き込んだ姿。内側の青い環は酸素、外側の赤い縁は水素と窒素です。環の内縁を向いた無数の「彗星状ノット」— それぞれ太陽系ほどの大きさ — がこの星雲の特徴です。",
-                                    "与环状星云相同的太阳终局，只是离得更近、正面望入。内侧蓝环是氧，外侧红边是氢和氮。数千个朝向环内缘的“彗星状结节”——每个都有太阳系那么大——是这个星云的标志。") },
-
-            // 6) Crab Nebula — supernova remnant
+            // 5) Crab Nebula — supernova remnant
             new Hero {
                 id = "Crab", form = Form.Nebula, position = new Vector3(-22, 18, 34), framing = 3.4f,
                 type = 3, color1 = new Color(2.3f, 0.95f, 0.35f), color2 = new Color(0.4f, 1.6f, 1.0f),

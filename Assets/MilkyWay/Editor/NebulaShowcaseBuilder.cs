@@ -118,14 +118,14 @@ namespace MilkyWay.Editor
                 // dimmer than before, so the dark dust — not the glow — dominates.
                 backHero.color1 = new Color(2.3f, 0.4f, 0.72f);
                 backHero.color2 = new Color(0.6f, 0.9f, 1.2f);
-                backHero.brightness = 1.35f; backHero.radius = h.radius * 1.5f; backHero.density = 0.8f;
-                backHero.noiseScale = 0.2f; backHero.filament = 1.5f; backHero.threshold = 0.52f;
+                backHero.brightness = 1.15f; backHero.radius = h.radius * 1.25f; backHero.density = 0.8f;
+                backHero.noiseScale = 0.22f; backHero.filament = 1.5f; backHero.threshold = 0.55f;
                 backHero.dust = 1.0f; backHero.stretch = Vector3.zero;
                 NebulaLibrary.ApplyMaterial(bgMat, backHero);
                 var bg = MakeVolume(root.transform, "Backdrop", bgMat);
-                // A broad bright emission WALL centred behind and slightly above, so
-                // the dust bank silhouettes against it (dark below, red glow above).
-                bg.transform.localPosition = new Vector3(0f, 1.6f, h.radius * 1.15f);
+                // A contained glow just behind and above — only enough to silhouette
+                // the dust against; the dark dust, not the glow, should dominate.
+                bg.transform.localPosition = new Vector3(0f, 1.3f, h.radius * 1.1f);
             }
 
             var mat = SaveMaterial(h.id + "_Neb", nebShader);
