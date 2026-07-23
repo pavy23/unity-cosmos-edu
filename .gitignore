@@ -42,3 +42,6 @@ crashlytics-build.properties
 
 # unity-mcp runtime scratch
 /.utmp/
+
+# Local Netlify folder
+.netlify

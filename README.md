@@ -6,6 +6,8 @@ the nebulae &amp; clusters gallery, each with a desktop showcase and a Quest pas
 
 *Formerly **BlackHoleEdu** — the project outgrew its first name.*
 
+**▶ Live WebGL demo: [cosmos-edu-783.netlify.app](https://cosmos-edu-783.netlify.app)**
+
 *[한국어 README](README.ko.md)*
 
 ## The exhibit at a glance

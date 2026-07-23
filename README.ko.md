@@ -6,6 +6,8 @@
 
 *구 **BlackHoleEdu** — 프로젝트가 첫 이름보다 커졌습니다.*
 
+**▶ 라이브 WebGL 데모: [cosmos-edu-783.netlify.app](https://cosmos-edu-783.netlify.app)**
+
 *[English README](README.md)*
 
 ## 전시 구성 한눈에
