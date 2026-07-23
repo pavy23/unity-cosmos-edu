@@ -6,23 +6,33 @@ namespace MilkyWay
 {
     /// <summary>
     /// The nebulae &amp; clusters browser: steps through the specimens one at a
-    /// time, gliding the camera to a three-quarter view of each and showing its
-    /// museum label (name, facts, blurb). ◀ / ▶ or the on-card buttons move
-    /// between objects; a slow drift keeps the parked view alive. The narrated
-    /// "life of a star" tour will layer on top of this later.
+    /// time and shows each one's museum label (name, facts, blurb). ◀ / ▶ or
+    /// the on-card buttons move between objects. Switching fades to black,
+    /// swaps everything instantly behind the blackout (camera, specimen, sky —
+    /// including the newly activated volume's heavy first frames), then fades
+    /// back in: no camera glide, no visible hitch.
     /// </summary>
     public class NebulaGallery : MonoBehaviour
     {
         public NebulaController controller;
         public BlackHoleEffect.CinematicOrbit orbit;
         public NebulaTour tour;
-        public float glideDuration = 2.4f;
+        public float fadeOutDuration = 0.35f;
+        public float fadeInDuration = 0.6f;
+        // A breath of motion on the parked view: the camera slowly arcs around
+        // the look point, so foreground stars and the volume slide gently
+        // against the photographic backdrop (parallax = depth), and the
+        // background starfield seems to flow. Amplitudes in degrees.
+        public float driftYaw = 1.6f;
+        public float driftPitch = 0.5f;
 
         bool tourActive;
         GameObject startBtn;
         int index = -1;
-        float glideT = 1f;
-        Vector3 fromPos, toPos, fromLook, toLook, curLook;
+        int targetIndex;
+        Coroutine transCo;
+        Image fadeImg;
+        Vector3 basePos, baseLook;
 
         RectTransform card;
         Text cardTitle, cardFacts, cardBody, cardCount;
@@ -113,6 +123,18 @@ namespace MilkyWay
 
         void Frame(int i, bool instant = false)
         {
+            targetIndex = i;
+            if (instant) { Apply(i); SetFade(0f); return; }
+            // Retarget an in-flight transition instead of stacking coroutines:
+            // the blackout applies whatever targetIndex is newest.
+            if (transCo == null) transCo = StartCoroutine(FadeSwap());
+        }
+
+        /// <summary>Everything that changes between specimens, applied in one
+        /// go (behind the blackout): one-at-a-time activation, camera park,
+        /// sky region, label.</summary>
+        void Apply(int i)
+        {
             index = i;
             // Only the framed specimen renders — each nebula is a full-screen
             // raymarch, so showing all six at once is a heavy, needless load (and
@@ -126,39 +148,73 @@ namespace MilkyWay
             float radius = controller.Radius(i);
 
             // A sun-lit three-quarter view: back-and-up-and-to-the-side.
-            Vector3 dir = new Vector3(0.35f, 0.32f, -1f).normalized;
-            toPos = t.position + dir * radius * controller.Hero(i).framing;
-            toLook = t.position;
+            basePos = t.position + NebulaLibrary.ViewDir * radius * controller.Hero(i).framing;
+            // Keep the specimen's visual centre above the lower-third label.
+            baseLook = t.position - Vector3.up * radius * 0.16f;
+            transform.position = basePos;
+            transform.LookAt(baseLook);
 
-            fromPos = transform.position;
-            fromLook = curLook;
-            glideT = instant ? 1f : 0f;
-            if (instant) { transform.position = toPos; transform.LookAt(toLook); curLook = toLook; }
-
-            // Snap the sky to this specimen's region of the panorama.
             ApplyBg(i);
-
             EnsureCard();
             Refresh();
+        }
+
+        System.Collections.IEnumerator FadeSwap()
+        {
+            yield return FadeTo(1f, fadeOutDuration);
+            Apply(targetIndex);
+            // Let the newly activated volume render its heaviest first frames
+            // while the screen is still fully black.
+            yield return null;
+            yield return null;
+            yield return FadeTo(0f, fadeInDuration);
+            transCo = null;
+            if (targetIndex != index) Frame(targetIndex);
+        }
+
+        System.Collections.IEnumerator FadeTo(float to, float duration)
+        {
+            EnsureFader();
+            float from = fadeImg.color.a;
+            for (float t = 0f; t < duration; t += Time.deltaTime)
+            {
+                SetFade(Mathf.Lerp(from, to, t / Mathf.Max(duration, 0.01f)));
+                yield return null;
+            }
+            SetFade(to);
+        }
+
+        void SetFade(float a)
+        {
+            EnsureFader();
+            fadeImg.color = new Color(0f, 0f, 0f, a);
+            fadeImg.enabled = a > 0.001f;   // skip the overdraw when clear
+        }
+
+        void EnsureFader()
+        {
+            if (fadeImg != null) return;
+            var go = new GameObject("Fade Canvas", typeof(Canvas));
+            go.transform.SetParent(transform, false);
+            var canvas = go.GetComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 5000;   // above every UI card
+            var imgGO = new GameObject("Black", typeof(Image));
+            imgGO.transform.SetParent(go.transform, false);
+            fadeImg = imgGO.GetComponent<Image>();
+            fadeImg.raycastTarget = false;   // never block the nav buttons
+            var rt = fadeImg.rectTransform;
+            rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
+            rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
+            fadeImg.color = new Color(0f, 0f, 0f, 0f);
+            fadeImg.enabled = false;
         }
 
         void Update()
         {
             if (controller == null || controller.Count == 0) return;
 
-            if (glideT < 1f)
-            {
-                glideT = Mathf.Min(1f, glideT + Time.deltaTime / Mathf.Max(glideDuration, 0.1f));
-                float u = Mathf.SmoothStep(0f, 1f, glideT);
-                transform.position = Vector3.Lerp(fromPos, toPos, u);
-                curLook = Vector3.Lerp(fromLook, toLook, u);
-                transform.LookAt(curLook);
-            }
-            else
-            {
-                // Held static — no drift (each specimen is a clean, still view).
-                curLook = toLook;
-            }
+            Drift();
 
             if (tourActive) return;   // the tour owns navigation while it runs
 #if ENABLE_INPUT_SYSTEM
@@ -172,6 +228,22 @@ namespace MilkyWay
             if (Input.GetKeyDown(KeyCode.RightArrow)) Next();
             if (Input.GetKeyDown(KeyCode.LeftArrow)) Prev();
 #endif
+        }
+
+        /// <summary>Slow two-axis arc around the look point. Incommensurate
+        /// periods so the path never visibly repeats; amplitudes stay inside
+        /// the photo quads' overscan margins.</summary>
+        void Drift()
+        {
+            if (index < 0) return;
+            float t = Time.time;
+            float yaw = Mathf.Sin(t * (2f * Mathf.PI / 47f)) * driftYaw;
+            float pitch = Mathf.Sin(t * (2f * Mathf.PI / 61f) + 1.3f) * driftPitch;
+            Vector3 offset = basePos - baseLook;
+            Vector3 right = Vector3.Cross(Vector3.up, offset).normalized;
+            Quaternion q = Quaternion.AngleAxis(yaw, Vector3.up) * Quaternion.AngleAxis(pitch, right);
+            transform.position = baseLook + q * offset;
+            transform.LookAt(baseLook);
         }
 
         void Refresh()

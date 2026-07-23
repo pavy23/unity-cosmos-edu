@@ -1,8 +1,8 @@
 # CosmosEdu
 
-A real-time cosmos exhibit built with **Unity 6 + URP** — three connected, fully narrated
-educational simulations: a general-relativity black hole, the Milky Way, and the solar system,
-each with a desktop showcase and a Quest passthrough (MR) edition.
+A real-time cosmos exhibit built with **Unity 6 + URP** — four connected, fully narrated
+educational simulations: a general-relativity black hole, the Milky Way, the solar system, and
+the nebulae &amp; clusters gallery, each with a desktop showcase and a Quest passthrough (MR) edition.
 
 *Formerly **BlackHoleEdu** — the project outgrew its first name.*
 
@@ -11,14 +11,16 @@ each with a desktop showcase and a Quest passthrough (MR) edition.
 ## The exhibit at a glance
 
 A title screen (build index 0) lets visitors pick a language and an experience; every scene has a
-way back to it (**F10** on desktop, a menu button in MR).
+way back to it (a toolbar button on desktop, a menu button in MR). A headset boots the same build:
+`TitleScreen` detects a running HMD and hands off to `MRTitle`, the passthrough picker.
 
 | Exhibit | Desktop scene | MR scene |
 |---|---|---|
-| Title / picker | `TitleScreen` | — |
+| Title / picker | `TitleScreen` | `MRTitle` |
 | Black hole | `BlackHoleShowcase` | `BlackHoleMR` |
 | Milky Way | `MilkyWayShowcase` | `MilkyWayMR` |
 | Solar system | `SolarSystemShowcase` | `SolarSystemMR` |
+| Nebulae &amp; clusters | `NebulaShowcase` | `NebulaMR` |
 
 The exhibits link to each other in-fiction as well: the black hole scene is Sagittarius A*, the
 galaxy scene can dive into its core and land back at the black hole (F9), and the solar-system
@@ -28,7 +30,8 @@ tour ends by returning to the galaxy.
   narration clip (neural TTS per language); switch any time (K, or the on-screen selector)
 - **Almost fully procedural** — skyboxes, the galaxy, star surfaces, soundscapes and
   gravitational-wave chirp audio are generated in code; the few external assets are observed
-  planet/moon texture maps and a bundled pan-CJK font
+  planet/moon texture maps, DSS2 deep-sky survey photography (nebula backdrops, with
+  attribution), and a bundled pan-CJK font
 - **Runs on PC (primary), Quest passthrough, and WebGL** (all shaders `target 3.5`; post-processing
   is disabled on web — a known URP/WebGL FSR limitation)
 
@@ -107,6 +110,27 @@ legibility clock (Kepler ratios preserved).
   true-scale lesson re-authored for a fixed viewer: the rig itself shrinks so Neptune's orbit stays
   put while the planets vanish into grains
 
+## 4 · Nebulae &amp; clusters (`NebulaShowcase` / `NebulaMR`)
+
+A browsable gallery of six hero deep-sky objects — the Orion Nebula, the Horsehead, the Pleiades,
+the Ring Nebula, the Crab, and Omega Centauri — one volumetric specimen per stellar life-stage,
+shown one at a time against **real DSS2 survey photography** of each object's true region of sky.
+Switching specimens fades to black and back (the swap happens behind the blackout, so no hitch);
+the parked view keeps a slow two-axis camera drift, so the volumes parallax against the photos.
+
+- **Form-matched volumetrics** — each nebula type gets its own raymarched model: turbulent Hα/OIII
+  emission (Orion), a camera-facing torus with a genuinely dark hole (the Ring), sparse filament
+  lace over synchrotron haze (the Crab), striated reflection wisps (the Pleiades), a baked
+  point-cloud globular (ω Cen)
+- **The Horsehead is a hybrid diorama** — the pillar's silhouette is *traced from the actual
+  photograph* (baked into a mask texture) and extruded as an eroded dust volume, standing in front
+  of the real inpainted IC 434 curtain; camera drift parallaxes the two
+- **"The Life of a Star"** — a narrated tour threading the six specimens into one story: cloud →
+  cold dust → cluster → planetary nebula → supernova → the survivors, and the cycle
+- **MR edition** — the specimens as a single grabbable miniature (~0.8 m) shown one at a time,
+  the museum label following along, the Horsehead as a shadow box floating in your room, and the
+  same narrated tour driven by hand-ray cards
+
 ## The physics actually implemented (black hole)
 
 The geometry on screen is the numerical solution of the real equations — not an artist's
@@ -177,5 +201,47 @@ Each in-app theory card (X) states whether its topic is computed or stylized.
   [edge-tts](https://github.com/rany2/edge-tts); transcripts live in each script's `NarrationLines`
   arrays — subtitle == voice is the exhibit-wide convention)
 - WebGL builds are gzip-compressed; serve with `python Builds/serve_webgl.py` locally
+
+## Building
+
+All scenes are **menu-driven build artifacts** (`Tools/…/Create … Scene`) and are already
+registered in *Build Settings* — `TitleScreen` at index 0 is the boot scene for every platform.
+One scene list serves all three targets: the MR scenes are inert outside a headset, and
+`TitleScreen` hands off to `MRTitle` automatically when an HMD is running.
+
+### PC (Windows)
+
+1. `File → Build Profiles` → platform **Windows**.
+2. Scripting backend: **Mono** works out of the box; switch to IL2CPP if the module is installed
+   (`Project Settings → Player → Configuration`).
+3. Build to `Builds/Windows/` and run `CosmosEdu.exe`.
+
+### WebGL
+
+1. `File → Build Profiles` → switch platform to **WebGL**.
+2. Player settings that must stay as configured (already set in the repo):
+   - **WebGL Template: `PROJECT:CosmosEdu`** — the bundled template fixes canvas focus (keyboard
+     input) and right-drag orbiting in the browser; the default template breaks both.
+   - Compression **gzip** — the hosting server must send `Content-Encoding: gzip`.
+   - Every shader stays `#pragma target 3.5` (SM 4.5 features silently break WebGL builds).
+3. Build to `Builds/WebGL/`, then serve locally:
+   ```
+   python Builds/serve_webgl.py    # http://localhost:8123 (handles Content-Encoding)
+   ```
+   A bare `python -m http.server` will NOT work with gzip builds.
+4. Known WebGL limits: post-processing is off (URP FSR shader incompatibility — PC is unaffected),
+   and audio streaming is disabled (clips decompress on load).
+
+### MR (Meta Quest, passthrough)
+
+1. `File → Build Profiles` → platform **Android** (install the Android modules + OpenXR support).
+2. Scripting backend **IL2CPP** + target architecture **ARM64** (Quest requires both).
+3. `Project Settings → XR Plug-in Management → Android`: enable **OpenXR** with the Meta Quest
+   feature group (passthrough requires the Meta OpenXR features; the AR camera in each MR scene
+   drives it via AR Foundation).
+4. Build the APK and install: `adb install -r CosmosEdu.apk`.
+5. On device the build boots into `TitleScreen`, detects the HMD, and lands in `MRTitle` — the
+   passthrough picker with all four MR exhibits. In-editor, pressing Play in any MR scene spawns
+   the **XR Device Simulator** for keyboard/mouse hand-ray testing.
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)

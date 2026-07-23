@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace BlackHoleEffect
@@ -29,6 +30,7 @@ namespace BlackHoleEffect
         AudioSource source;
         BlackHoleAudio ambience;
         float ambienceBaseVolume;
+        readonly Dictionary<string, AudioClip> clips = new Dictionary<string, AudioClip>();
 
         public bool IsSpeaking => source != null && source.isPlaying;
 
@@ -46,8 +48,13 @@ namespace BlackHoleEffect
         /// can fall back to their fixed timings).</summary>
         public float Play(string key)
         {
-            var clip = Resources.Load<AudioClip>("Narration/" + Loc.NarrationFolder + key);
-            if (clip == null) return 0f;
+            string path = ClipPath(key);
+            var clip = LoadClip(path);
+            if (clip == null)
+            {
+                Debug.LogWarning($"Narration clip is missing: Resources/{path}");
+                return 0f;
+            }
             source.Stop();
             source.clip = clip;
             source.Play();
@@ -67,10 +74,20 @@ namespace BlackHoleEffect
         {
             foreach (var key in keys)
             {
-                var clip = Resources.Load<AudioClip>("Narration/" + Loc.NarrationFolder + key);
+                var clip = LoadClip(ClipPath(key));
                 if (clip != null && clip.loadState == AudioDataLoadState.Unloaded)
                     clip.LoadAudioData();
             }
+        }
+
+        string ClipPath(string key) => "Narration/" + Loc.NarrationFolder + key;
+
+        AudioClip LoadClip(string path)
+        {
+            if (clips.TryGetValue(path, out var clip)) return clip;
+            clip = Resources.Load<AudioClip>(path);
+            if (clip != null) clips[path] = clip;
+            return clip;
         }
 
         void Update()

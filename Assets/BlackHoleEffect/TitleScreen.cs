@@ -59,7 +59,29 @@ namespace BlackHoleEffect
             (Loc.Lang.Chinese, "中文"),
         };
 
-        void Start() => Build();
+        void Start()
+        {
+            // One build, two front doors: a headset boots this same scene, but
+            // its screen-space picker is unusable on an HMD — hand off to the
+            // MR title before any UI is built. The editor's XR simulator never
+            // trips this: it simulates input devices, not a display, and the
+            // scene guard removes it from non-XR scenes anyway.
+            if (HmdActive() && Application.CanStreamedLevelBeLoaded("MRTitle"))
+            {
+                UnityEngine.SceneManagement.SceneManager.LoadScene("MRTitle");
+                return;
+            }
+            Build();
+        }
+
+        static bool HmdActive()
+        {
+            var displays = new System.Collections.Generic.List<UnityEngine.XR.XRDisplaySubsystem>();
+            SubsystemManager.GetSubsystems(displays);
+            foreach (var d in displays)
+                if (d.running) return true;
+            return false;
+        }
 
         void Update()
         {
@@ -141,7 +163,7 @@ namespace BlackHoleEffect
                     sr.anchorMin = Vector2.zero; sr.anchorMax = Vector2.one;
                     sr.offsetMin = sr.offsetMax = Vector2.zero;
                     var simg = scrim.GetComponent<Image>();
-                    simg.sprite = EdgeGradient;
+                    simg.sprite = TitleScrim.EdgeGradient;
                     simg.type = Image.Type.Simple;
                     simg.color = Color.white;
                     simg.raycastTarget = false;
@@ -228,31 +250,5 @@ namespace BlackHoleEffect
             }
         }
 
-        static Sprite edgeGradient;
-        /// <summary>A vertical scrim: dark at the top and bottom, clear through
-        /// the middle. Darkens the bands the title and blurb sit on without
-        /// veiling the scene photo in the centre.</summary>
-        static Sprite EdgeGradient
-        {
-            get
-            {
-                if (edgeGradient != null) return edgeGradient;
-                const int h = 128;
-                var tex = new Texture2D(4, h, TextureFormat.RGBA32, false)
-                    { wrapMode = TextureWrapMode.Clamp };
-                for (int y = 0; y < h; y++)
-                {
-                    float v = y / (h - 1f);            // 0 bottom .. 1 top
-                    float topBand = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.72f, 1f, v));
-                    float botBand = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.30f, 0f, v));
-                    float a = Mathf.Max(topBand, botBand) * 0.72f;
-                    var c = new Color(0.02f, 0.03f, 0.06f, a);
-                    for (int x = 0; x < 4; x++) tex.SetPixel(x, y, c);
-                }
-                tex.Apply();
-                edgeGradient = Sprite.Create(tex, new Rect(0, 0, 4, h), new Vector2(0.5f, 0.5f));
-                return edgeGradient;
-            }
-        }
     }
 }

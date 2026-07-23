@@ -106,7 +106,10 @@ Shader "MilkyWay/DeepSpaceSkybox"
                     float star = exp(-d * d / (radius * radius));
                     float warm = ds_hash(cell + 9.2);
                     float3 tint = lerp(float3(0.75, 0.82, 1.0), float3(1.0, 0.88, 0.72), warm);
-                    col = star * tint * (0.25 + 0.75 * ds_hash(cell + 12.4));
+                    // Gentle per-star scintillation (uncorrelated phase/rate).
+                    float tw = 1.0 + 0.15 * sin(_Time.y * (1.2 + 2.4 * ds_hash(cell + 15.8))
+                                                + ds_hash(cell + 8.3) * 6.2832);
+                    col = star * tint * (0.25 + 0.75 * ds_hash(cell + 12.4)) * tw;
                 }
                 return col;
             }

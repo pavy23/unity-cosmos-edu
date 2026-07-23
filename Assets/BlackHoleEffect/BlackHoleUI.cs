@@ -74,7 +74,27 @@ namespace BlackHoleEffect
         {
             worldSpaceOverride = null;
             canvas = null;
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.playModeStateChanged -= OnPlayModeChanged;
+            UnityEditor.EditorApplication.playModeStateChanged += OnPlayModeChanged;
+#endif
         }
+
+#if UNITY_EDITOR
+        /// <summary>Tear the DontSave canvas down while play mode is still
+        /// alive. Left to linger into edit mode, the next session's sweep
+        /// destroys it under a FRESH domain — and an MR canvas's
+        /// TrackedDeviceGraphicRaycaster then throws KeyNotFound from
+        /// OnDisable (XRI's static registry no longer knows it). Unity logs
+        /// that exception internally, so no try/catch at the sweep can
+        /// silence it; destroying in-session is the only clean path. Player
+        /// builds never reload the domain between scenes, so they are safe.</summary>
+        static void OnPlayModeChanged(UnityEditor.PlayModeStateChange change)
+        {
+            if (change == UnityEditor.PlayModeStateChange.ExitingPlayMode && canvas != null)
+                Object.DestroyImmediate(canvas.gameObject);
+        }
+#endif
 
         // Theme. The two colours that carry text contrast are firmer in MR: a
         // panel there is composited over whatever the room happens to be, which
@@ -123,8 +143,8 @@ namespace BlackHoleEffect
             // orphan UI (e.g. an uncontrollable help bar) stays on screen.
             foreach (var c in Resources.FindObjectsOfTypeAll<Canvas>())
                 if (c != null && c.name == "BlackHole UI Canvas" && c != canvas)
-                    Object.DestroyImmediate(c.gameObject);
-            if (canvas != null) Object.DestroyImmediate(canvas.gameObject);
+                    SweepStaleCanvas(c.gameObject);
+            if (canvas != null) SweepStaleCanvas(canvas.gameObject);
 
             var go = new GameObject("BlackHole UI Canvas") { hideFlags = HideFlags.DontSave };
             canvas = go.AddComponent<Canvas>();
@@ -160,6 +180,22 @@ namespace BlackHoleEffect
             scaler.referenceResolution = new Vector2(1920f, 1080f);
             scaler.matchWidthOrHeight = 0.5f;
             return canvas;
+        }
+
+        /// <summary>Destroy a stale canvas without letting XRI take the sweep
+        /// down: a canvas that carried a TrackedDeviceGraphicRaycaster in a
+        /// previous session throws KeyNotFound from the raycaster's OnDisable
+        /// (its static registry was reset by the domain reload and no longer
+        /// knows the canvas). Strip the raycaster under a catch first.</summary>
+        static void SweepStaleCanvas(GameObject go)
+        {
+            foreach (var rc in go.GetComponentsInChildren<TrackedDeviceGraphicRaycaster>(true))
+            {
+                try { Object.DestroyImmediate(rc); }
+                catch (System.Exception) { /* registry desync — the component is gone regardless */ }
+            }
+            try { Object.DestroyImmediate(go); }
+            catch (System.Exception) { }
         }
 
         public static Sprite RoundedSprite

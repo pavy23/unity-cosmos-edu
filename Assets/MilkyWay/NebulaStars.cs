@@ -20,10 +20,18 @@ namespace MilkyWay
         public int cfgBrightN, cfgFieldN;
         public float cfgRadius = 8f, cfgCoreRadius = 1f;
 
+        // Gentle scintillation — real skies are never frozen. Kept subtle so it
+        // reads as atmosphere, not blinking lights.
+        public float twinkleAmount = 1f;
+
         Texture2D spikeTex, dotTex;
         Material spikeMat, dotMat;
         readonly List<Transform> stars = new();
         readonly List<float> baseScale = new();
+        readonly List<Color> baseColor = new();
+        readonly List<Material> starMats = new();
+        readonly List<float> twinklePhase = new();
+        readonly List<float> twinkleSpeed = new();
         Camera cam;
 
         void Awake()
@@ -83,12 +91,18 @@ namespace MilkyWay
             mr.receiveShadows = false;
             stars.Add(go.transform);
             baseScale.Add(size);
+            baseColor.Add(c);
+            starMats.Add(m);
+            // Uncorrelated phases/rates so the field shimmers, never pulses in sync.
+            twinklePhase.Add((float)(new System.Random(stars.Count * 7919 + 13).NextDouble()) * Mathf.PI * 2f);
+            twinkleSpeed.Add(1.2f + (stars.Count * 0.37f % 1f) * 2.6f);
         }
 
         void LateUpdate()
         {
             if (cam == null) cam = Camera.main;
             if (cam == null) return;
+            float time = Time.time;
             for (int i = 0; i < stars.Count; i++)
             {
                 var t = stars[i];
@@ -96,6 +110,13 @@ namespace MilkyWay
                 // Face the camera (billboard). Scale gently with distance so the
                 // spikes read at any range.
                 t.rotation = cam.transform.rotation;
+
+                if (twinkleAmount > 0f)
+                {
+                    float s = Mathf.Sin(time * twinkleSpeed[i] + twinklePhase[i]);
+                    t.localScale = Vector3.one * baseScale[i] * (1f + 0.10f * s * twinkleAmount);
+                    starMats[i].color = baseColor[i] * (1f + 0.18f * s * twinkleAmount);
+                }
             }
         }
 
@@ -147,7 +168,8 @@ namespace MilkyWay
         void Clear()
         {
             foreach (var t in stars) if (t != null) Destroy(t.gameObject);
-            stars.Clear(); baseScale.Clear();
+            stars.Clear(); baseScale.Clear(); baseColor.Clear();
+            starMats.Clear(); twinklePhase.Clear(); twinkleSpeed.Clear();
         }
 
         void OnDestroy()

@@ -3,6 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>{{{ PRODUCT_NAME }}}</title>
     <link rel="shortcut icon" href="TemplateData/favicon.ico">
     <link rel="stylesheet" href="TemplateData/style.css">
@@ -30,6 +31,33 @@
     </div>
     <script>
       var canvas = document.querySelector("#unity-canvas");
+      var container = document.querySelector("#unity-container");
+      var footer = document.querySelector("#unity-footer");
+      var baseCanvasWidth = Number("{{{ WIDTH }}}");
+      var baseCanvasHeight = Number("{{{ HEIGHT }}}");
+      var isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+      // Keep the authored aspect ratio while fitting both dimensions of the
+      // browser. Unity may change canvas.width/height for devicePixelRatio, so
+      // the template dimensions are captured separately and remain the stable
+      // CSS sizing reference.
+      function resizeUnityCanvas() {
+        var footerHeight = isMobile ? 0 : 38;
+        var availableWidth = Math.max(1, window.innerWidth);
+        var availableHeight = Math.max(1, window.innerHeight - footerHeight);
+        var scale = Math.min(
+          availableWidth / baseCanvasWidth,
+          availableHeight / baseCanvasHeight
+        );
+        var cssWidth = Math.max(1, Math.floor(baseCanvasWidth * scale));
+        var cssHeight = Math.max(1, Math.floor(baseCanvasHeight * scale));
+
+        canvas.style.width = cssWidth + "px";
+        canvas.style.height = cssHeight + "px";
+        container.style.width = cssWidth + "px";
+        container.style.height = (cssHeight + footerHeight) + "px";
+        if (!isMobile) footer.style.width = cssWidth + "px";
+      }
 
       function unityShowBanner(msg, type) {
         var warningBanner = document.querySelector("#unity-warning");
@@ -69,17 +97,13 @@
         showBanner: unityShowBanner,
       };
 
-      if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-        var meta = document.createElement('meta');
-        meta.name = 'viewport';
-        meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
-        document.getElementsByTagName('head')[0].appendChild(meta);
-        document.querySelector("#unity-container").className = "unity-mobile";
+      if (isMobile) {
+        container.className = "unity-mobile";
         canvas.className = "unity-mobile";
-      } else {
-        canvas.style.width = "{{{ WIDTH }}}px";
-        canvas.style.height = "{{{ HEIGHT }}}px";
       }
+      resizeUnityCanvas();
+      window.addEventListener("resize", resizeUnityCanvas);
+      window.addEventListener("orientationchange", resizeUnityCanvas);
 
 #if BACKGROUND_FILENAME
       canvas.style.background = "url('" + buildUrl + "/{{{ BACKGROUND_FILENAME.replace(/'/g, '%27') }}}') center / cover";
@@ -113,6 +137,7 @@
           document.querySelector("#unity-progress-bar-full").style.width = 100 * progress + "%";
         }).then((unityInstance) => {
           document.querySelector("#unity-loading-bar").style.display = "none";
+          resizeUnityCanvas();
           focusCanvas();
           window.addEventListener("load", focusCanvas);
           // pointerdown fires before focus is stolen elsewhere; keep the canvas

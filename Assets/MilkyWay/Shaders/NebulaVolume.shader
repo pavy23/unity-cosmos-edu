@@ -30,6 +30,10 @@ Shader "MilkyWay/NebulaVolume"
         _ShellRadius("Shell Radius (0..1)", Range(0.1, 0.95)) = 0.62
         _ShellThickness("Shell Thickness", Range(0.02, 0.4)) = 0.14
 
+        [Header(Dark nebula)]
+        // Baked from the real photograph: R = dust silhouette, G = rim band.
+        _DustMask("Dust Silhouette Mask", 2D) = "black" {}
+
         [Header(Quality)]
         _Steps("March Steps", Range(24, 160)) = 72
         // 1 = the cloud darkens what's behind it (a dark nebula silhouettes);
@@ -62,6 +66,9 @@ Shader "MilkyWay/NebulaVolume"
                 float _ShellRadius, _ShellThickness;
                 float _Steps, _OccludeBg;
             CBUFFER_END
+
+            TEXTURE2D(_DustMask);
+            SAMPLER(sampler_DustMask);
 
             // ---- value noise + fbm -------------------------------------------
             float neb_hash(float3 p)
@@ -142,7 +149,10 @@ Shader "MilkyWay/NebulaVolume"
                     // OIII, fading through pink Hα to deep-red SII in the shielded
                     // dusty clumps — which also extinct hardest, cutting dark lanes.
                     float3 hot = float3(0.16, 0.10, 0.0) * _Radius;
-                    float ion = smoothstep(1.0, 0.0, length(p - hot) / (_Radius * 0.9));
+                    // Keep the oxygen-rich cavity compact; a 0.9R falloff made
+                    // most of an emission nebula read as green fog.
+                    float ion = smoothstep(1.0, 0.0, length(p - hot) / (_Radius * 0.52));
+                    ion *= ion;
                     float dust = saturate(neb_fbm(qw * 1.6 - 3.0) * 1.8 - 0.6);
                     // A dark dust lane biting across the cavity (Orion's "fish
                     // mouth"): a great-circle band where the position aligns with a
@@ -151,15 +161,19 @@ Shader "MilkyWay/NebulaVolume"
                                     abs(dot(normalize(p + 1e-4), normalize(float3(-0.5, -0.18, 0.32)))))
                                  * smoothstep(1.0, 0.15, r);
 
-                    float3 oiii = _Color2.rgb;                         // teal-green core
+                    float3 oiii = _Color2.rgb * float3(0.72, 0.88, 1.15); // blue-cyan core
                     float3 halpha = _Color1.rgb;                      // pink body
                     float3 sii = _Color1.rgb * float3(0.7, 0.42, 0.42); // deep red (less brown)
-                    float3 c = lerp(halpha, oiii, saturate(ion * 1.9));
+                    float3 c = lerp(halpha, oiii, saturate(ion * 2.2));
                     c = lerp(c, sii, saturate(dust * 0.7));
 
-                    emission = c * d * (0.4 + 1.7 * ion) * _Brightness;
+                    // A low-opacity body joins the detailed knots into broad
+                    // wings without filling the whole bounding sphere.
+                    float broad = edge * smoothstep(1.05, 0.05, r)
+                                * (0.045 + 0.11 * fine) * _Density;
+                    emission = c * (d + broad) * (0.42 + 2.0 * ion) * _Brightness;
                     emission *= (1.0 - 0.88 * lane);                   // carve the dark lane
-                    absorb = (d + dust * _Density * 0.8 + lane * _Density * 1.6) * _DustStrength;
+                    absorb = (d * 0.65 + dust * _Density * 0.55 + lane * _Density * 1.45) * _DustStrength;
                 }
                 else if (_NebulaType < 1.5)
                 {
@@ -191,14 +205,16 @@ Shader "MilkyWay/NebulaVolume"
                     torus *= (0.3 + 1.35 * fine);                      // clump / break the ring
                     float mixr = smoothstep(ringR - _ShellThickness * 1.4,
                                             ringR + _ShellThickness * 1.4, radial);
-                    float3 ringCol = lerp(_Color2.rgb, _Color1.rgb, mixr); // teal in -> red out
-                    emission = ringCol * torus * _Brightness;
+                    float3 inner = _Color2.rgb * float3(0.72, 0.82, 1.18);
+                    float3 outer = _Color1.rgb * float3(0.72, 0.55, 0.62);
+                    float3 ringCol = lerp(inner, outer, mixr);          // blue-cyan in -> red out
+                    emission = ringCol * torus * _Brightness * 0.46;
                     // Faint OIII veil spanning the hole (M57's dim interior), but
                     // thin enough that the ring clearly dominates.
                     float veil = smoothstep(_ShellRadius + _ShellThickness, 0.0, radial)
                                * smoothstep(1.1, 0.2, abs(axial) / _Radius);
-                    emission += _Color2.rgb * veil * 0.05 * _Brightness;
-                    emission += float3(1.0, 0.95, 0.9) * 0.3 * exp(-r * r * 3000.0) * _Brightness; // white dwarf
+                    emission += inner * veil * 0.008 * _Brightness;
+                    emission += float3(1.0, 0.97, 0.92) * 0.22 * exp(-r * r * 3600.0) * _Brightness; // white dwarf
                     absorb = torus * _DustStrength * 0.3;
                 }
                 else if (_NebulaType < 3.5)
@@ -210,29 +226,94 @@ Shader "MilkyWay/NebulaVolume"
                     float bodyN = neb_fbm(qw * 1.3 + 2.0);
                     // A clearly BLUE, dim interior — the pulsar-wind synchrotron —
                     // so the gaps between filaments read blue, not white.
-                    float synch = smoothstep(1.05, 0.1, r) * (0.14 + 0.5 * bodyN);
-                    emission = float3(0.3, 0.5, 1.25) * synch * 0.42 * _Brightness;
+                    float synch = smoothstep(1.05, 0.1, r) * (0.10 + 0.42 * bodyN);
+                    emission = float3(0.22, 0.62, 1.35) * synch * 0.38 * _Brightness;
                     // SPARSE orange filament lace: only the very sharpest ridges
                     // survive (high smoothstep floor), so wide dark/blue gaps open
                     // between thin strands. Green SII flecks on the brightest ridges.
                     float web = neb_ridged(qw * 3.0 + 8.0);
-                    float fil = smoothstep(0.62, 0.9, web) * smoothstep(1.08, 0.12, r) * (0.4 + 0.6 * bodyN);
-                    float3 filCol = lerp(_Color1.rgb, float3(0.6, 1.25, 0.5), saturate((web - 0.88) * 4.0));
-                    emission += filCol * fil * _Brightness * 2.0;
+                    float fil = smoothstep(0.68, 0.92, web) * smoothstep(1.08, 0.12, r) * (0.35 + 0.65 * bodyN);
+                    float3 filCol = lerp(_Color1.rgb * float3(1.0, 0.68, 0.42),
+                                         float3(0.55, 1.1, 0.62), saturate((web - 0.9) * 5.0));
+                    emission += filCol * fil * _Brightness * 1.8;
                     absorb = (synch * 0.1 + fil) * _DustStrength * 0.25;
                 }
                 else
                 {
-                    // DARK NEBULA: a wall of opaque dust with an eroded, ragged TOP
-                    // edge — the Horsehead rises from a dark dust bank. Silhouetted
-                    // by what it BLOCKS (the occlusion alpha over the red glow
-                    // behind); a faint browned rim where that glow grazes it.
-                    float crest = 0.05 + 0.55 * neb_fbm(float3(p.x, 0.0, p.z) * _NoiseScale * 1.6 + 40.0);
-                    float hy = p.y / _Radius;                          // -1 base .. 1 top
-                    float bank = smoothstep(crest + 0.28, crest - 0.28, hy); // dense below crest
-                    float body = pow(base, 1.0) * edge * bank * _Density;
-                    absorb = body * _DustStrength * 3.5;
-                    emission = _Color1.rgb * body * 0.03 * _Brightness; // barely-lit rim
+                    // DARK NEBULA (B33 / IC 434), staged as a deep diorama that the
+                    // builder faces at the gallery camera (camera on -z): a red
+                    // hydrogen curtain glowing at the BACK of the volume, and the
+                    // horsehead in front of it. The silhouette is NOT modelled —
+                    // it is traced from the actual DSS2 photograph and baked into
+                    // _DustMask (R = dust, G = ionization rim), so the pillar has
+                    // the real B33 profile: a lumpy dust knob, not a sculpted
+                    // horse. The shader adds what the photo can't: thickness,
+                    // noise-eroded edges, a glowing curtain behind, parallax.
+                    float3 hp = p / _Radius;
+
+                    // Photo-space lookup (canvas spans hp.xy ±0.77, nudged down so
+                    // the pillar stays rooted in the photo's bank), domain-warped
+                    // so the traced outline breaks into ragged drifting dust; the
+                    // warp varies with z, so every depth slice tears differently.
+                    // Kept small and high-frequency: edge fuzz, not shape drift —
+                    // the outline's fidelity to the photograph IS the exhibit.
+                    // Anisotropic mapping: y scaled harder = the pillar squats
+                    // (it rendered too tall and spire-like at 1:1).
+                    float2 warp = float2(neb_fbm(hp * 5.5 + 61.0), neb_fbm(hp * 5.5 - 17.0)) - 0.5;
+                    float2 muv = saturate(hp.xy * float2(0.71, 0.9) + float2(0.5, 0.60) + warp * 0.03);
+                    half4 mtex = SAMPLE_TEXTURE2D_LOD(_DustMask, sampler_DustMask, muv, 0);
+
+                    // Extrude the photo silhouette through depth as an eroded slab.
+                    // The pillar (plus the local mound baked under it) is ALL the
+                    // volume renders: the photographic curtain behind carries the
+                    // full-width bank and its bright rim, so a volumetric ridge
+                    // would only fight it as a second horizon.
+                    float zprof = exp(-pow(hp.z / 0.26, 2.0));
+                    float horse = mtex.r * zprof;
+
+                    float silhouette = saturate(horse);
+                    // Interior texture from the photograph itself (B = the pillar's
+                    // own mottled shading): denser dust where the photo is dark,
+                    // faint warm glow where it is light — plus 3D clump noise.
+                    float body = silhouette * (0.45 + 0.85 * base + 0.35 * fine)
+                               * (1.25 - 0.6 * mtex.b) * _Density;
+                    absorb = body * _DustStrength;
+                    emission = _Color1.rgb * silhouette
+                             * (0.012 + 0.05 * mtex.b + 0.02 * fine) * _Brightness;
+
+                    // IC 434: the glowing curtain in the back half of the volume.
+                    // Edge-faded inside the bounding sphere, brightest at the
+                    // ionization front just above the ridge and fading upward,
+                    // combed into vertical streamers (noise tight across x/z,
+                    // stretched along y — the photographs' wind-blown look).
+                    // Ragged, noise-torn outer fade (like the emission type's
+                    // envelope) so the curtain ends organically, never as the
+                    // bounding sphere's circle.
+                    float cfade = smoothstep(1.06, 0.5,
+                        length(hp * float3(0.78, 0.95, 1.0)) + (env - 0.5) * 0.75);
+                    float slab = smoothstep(0.24, 0.55, hp.z) * cfade;
+                    float streak = neb_ridged(float3(qw.x * 2.6, qw.y * 0.55, qw.z * 2.6) + 23.0);
+                    float front = 0.3 + 0.7 * smoothstep(0.9, -0.25, hp.y);
+                    // Roll off below the bank line: down there the photograph's
+                    // dark dust carries the scene, and added red glow would shine
+                    // through the pillar's translucent base as fog.
+                    front *= smoothstep(-0.7, -0.22, hp.y);
+                    float curtain = slab * front * (0.16 + 0.34 * base + 0.6 * streak);
+                    // A LOW-weight depth layer only: the full-frame inpainted
+                    // photograph behind the volume carries the curtain now; this
+                    // just adds volumetric shimmer between photo and pillar.
+                    float3 curtCol = _Color1.rgb * lerp(float3(1.06, 0.7, 0.75), float3(0.95, 0.9, 1.1),
+                                                        smoothstep(-0.25, 0.8, hp.y));
+                    emission += curtCol * curtain * _Brightness * 0.4;
+                    absorb += slab * 0.04 * _Density;
+
+                    // The ionization rim: the photo-baked band hugging the pillar's
+                    // outline — but only on the BACK half (z > 0), so head-on rays
+                    // bury it behind the dust and it emerges just where rays graze
+                    // past the silhouette's edge.
+                    float backHalf = smoothstep(0.0, 0.12, hp.z);
+                    float rim = mtex.g * zprof * backHalf * (0.35 + 0.65 * fine);
+                    emission += _Color2.rgb * rim * _Brightness * 0.8;
                 }
             }
 

@@ -12,7 +12,12 @@ namespace MilkyWay
     /// </summary>
     public static class NebulaLibrary
     {
-        public enum Form { Nebula, Cluster }
+        public enum Form { Nebula, Cluster, Photo }
+
+        /// <summary>The gallery's fixed three-quarter viewing direction (from
+        /// specimen toward camera). Shared by the builder so photo quads and
+        /// backdrops face the parked camera exactly.</summary>
+        public static readonly Vector3 ViewDir = new Vector3(0.35f, 0.32f, -1f).normalized;
 
         public struct Hero
         {
@@ -26,7 +31,6 @@ namespace MilkyWay
             public Color color1, color2;
             public float brightness, radius, density, noiseScale, filament, threshold, dust;
             public float shellRadius, shellThickness;
-            public bool backdrop;   // dark nebula: spawn a red emission cloud behind
             public Vector3 stretch; // non-uniform volume scale (zero => uniform)
 
             // --- embedded stars ---
@@ -39,8 +43,13 @@ namespace MilkyWay
             public int clusterStars;
             public float clusterRadius;
 
-            // --- per-specimen background: which slice of the ESO panorama the
-            // object sits against, and how bright it is (dim so the volume reads) ---
+            // --- per-specimen background ---
+            // Every hero gets a real DSS2 photographic backdrop (a wide-field
+            // survey cutout centred on its true J2000 coordinates) placed behind
+            // the object; bgDim sets how bright that photo renders (0 => 0.55).
+            // The panoramic skybox still fills the periphery: bgRotation turns it
+            // to the object's region, bgTint dims it.
+            public float bgDim;         // backdrop photo exposure (0 => default)
             public float bgRotation;    // skybox _Rotation, degrees
             public Color bgTint;        // dim/colour cast (zero => default dim)
 
@@ -52,13 +61,13 @@ namespace MilkyWay
         {
             // 1) Orion Nebula — emission / stellar nursery
             new Hero {
-                id = "Orion", form = Form.Nebula, position = new Vector3(0, 0, 0), framing = 3.2f,
-                type = 0, color1 = new Color(2.3f, 0.5f, 0.85f), color2 = new Color(0.35f, 1.7f, 1.25f),
-                brightness = 1.5f, radius = 8f, density = 0.95f, noiseScale = 0.30f, filament = 1.7f,
-                threshold = 0.44f, dust = 1.5f,
+                id = "Orion", form = Form.Nebula, position = new Vector3(0, 0, 0), framing = 2.75f,
+                type = 0, color1 = new Color(2.05f, 0.32f, 0.82f), color2 = new Color(0.28f, 1.05f, 1.45f),
+                brightness = 1.7f, radius = 8f, density = 1.05f, noiseScale = 0.30f, filament = 1.7f,
+                threshold = 0.40f, dust = 1.05f,
                 starBright = new Color(0.75f, 1.15f, 1.35f), starField = new Color(1.2f, 1.05f, 0.95f),
                 brightN = 5, fieldN = 70, coreFrac = 0.16f,
-                bgRotation = 20f, bgTint = new Color(0.4f, 0.37f, 0.33f),
+                bgDim = 0.5f, bgRotation = 20f, bgTint = new Color(0.4f, 0.37f, 0.33f),
                 name = () => Loc.T("오리온 대성운 (M42)", "The Orion Nebula (M42)", "オリオン大星雲 (M42)", "猎户座大星云 (M42)"),
                 facts = () => Loc.T("발광성운 · 1,344광년 · 지름 24광년 · 별이 태어나는 곳",
                                     "Emission nebula · 1,344 ly · 24 ly across · a stellar nursery",
@@ -69,14 +78,21 @@ namespace MilkyWay
                                     "肉眼で見える最も近い星の誕生領域。中心のトラペジウム — 生まれたばかりの高温の星4つ — が放つ紫外線が水素ガスを熱し、ピンクに輝かせ、その放射圧が星雲に空洞を刻みます。",
                                     "肉眼可见的最近的恒星诞生区。中心的猎户四边形星团——四颗炽热的新生恒星——释放的紫外线加热氢气使其发出粉红色光芒，其辐射压在星云中雕出空腔。") },
 
-            // 2) Horsehead — dark nebula (with a red emission backdrop)
+            // 2) Horsehead — a volumetric diorama composed like the photographs:
+            // the red IC 434 curtain glowing at the BACK of the volume (combed
+            // into vertical streamers), the eroded dust horse rising from its
+            // ridge in FRONT of it, and a thin pink-white ionization rim where
+            // the UV front eats into the dust. The builder faces the volume at
+            // the parked camera, so horse and curtain parallax under the
+            // gallery drift — depth like Orion, silhouette like the photo.
             new Hero {
-                id = "Horsehead", form = Form.Nebula, position = new Vector3(42, 4, -8), framing = 4.6f,
-                type = 4, color1 = new Color(0.9f, 0.55f, 0.4f), color2 = new Color(0.4f, 0.5f, 0.7f),
-                brightness = 1.0f, radius = 7f, density = 2.3f, noiseScale = 0.35f, filament = 1.3f,
-                threshold = 0.38f, dust = 4.2f, backdrop = true,
-                starBright = Color.white, starField = Color.white, brightN = 0, fieldN = 0, coreFrac = 1f,
-                bgRotation = 70f, bgTint = new Color(0.38f, 0.35f, 0.32f),
+                id = "Horsehead", form = Form.Nebula, position = new Vector3(42, 4, -8), framing = 3.3f,
+                type = 4, color1 = new Color(2.0f, 0.38f, 0.5f), color2 = new Color(1.6f, 0.95f, 1.05f),
+                brightness = 1.3f, radius = 7f, density = 1.7f, noiseScale = 0.34f, filament = 1.3f,
+                threshold = 0.4f, dust = 3.6f,
+                starBright = new Color(0.85f, 0.95f, 1.2f), starField = new Color(1.0f, 0.95f, 0.88f),
+                brightN = 2, fieldN = 26, coreFrac = 0.6f,
+                bgDim = 1.05f, bgRotation = 70f, bgTint = new Color(0.20f, 0.19f, 0.18f),
                 name = () => Loc.T("말머리 성운 (B33)", "The Horsehead Nebula (B33)", "馬頭星雲 (B33)", "马头星云 (B33)"),
                 facts = () => Loc.T("암흑성운 · 1,375광년 · 붉은 성운 앞의 먼지 실루엣",
                                     "Dark nebula · 1,375 ly · a dust silhouette against red glow",
@@ -89,13 +105,13 @@ namespace MilkyWay
 
             // 3) Pleiades — reflection nebula + open cluster
             new Hero {
-                id = "Pleiades", form = Form.Nebula, position = new Vector3(-40, -3, 14), framing = 3.4f,
+                id = "Pleiades", form = Form.Nebula, position = new Vector3(-40, -3, 14), framing = 2.9f,
                 type = 1, color1 = new Color(0.5f, 0.8f, 2.3f), color2 = new Color(0.6f, 0.8f, 1.6f),
-                brightness = 2.6f, radius = 7f, density = 0.5f, noiseScale = 0.40f, filament = 1.5f,
-                threshold = 0.6f, dust = 0.8f,
+                brightness = 2.25f, radius = 7f, density = 0.46f, noiseScale = 0.40f, filament = 1.8f,
+                threshold = 0.54f, dust = 0.65f,
                 starBright = new Color(0.8f, 0.95f, 1.5f), starField = new Color(0.85f, 0.95f, 1.3f),
                 brightN = 10, fieldN = 40, coreFrac = 0.6f,
-                bgRotation = 130f, bgTint = new Color(0.34f, 0.36f, 0.42f),
+                bgDim = 0.6f, bgRotation = 130f, bgTint = new Color(0.34f, 0.36f, 0.42f),
                 name = () => Loc.T("플레이아데스 (M45)", "The Pleiades (M45)", "プレアデス星団 (M45)", "昴星团 (M45)"),
                 facts = () => Loc.T("반사성운 + 산개성단 · 444광년 · 1억 살 · 별 약 1,000개",
                                     "Reflection nebula + open cluster · 444 ly · 100 Myr · ~1,000 stars",
@@ -108,14 +124,14 @@ namespace MilkyWay
 
             // 4) Ring Nebula — planetary
             new Hero {
-                id = "Ring", form = Form.Nebula, position = new Vector3(26, -22, 30), framing = 3.6f,
+                id = "Ring", form = Form.Nebula, position = new Vector3(26, -22, 30), framing = 4.45f,
                 type = 2, color1 = new Color(2.1f, 0.5f, 0.5f), color2 = new Color(0.3f, 1.7f, 1.35f),
-                brightness = 1.0f, radius = 5f, density = 0.9f, noiseScale = 0.7f, filament = 0.8f,
-                threshold = 0.3f, dust = 0.6f, shellRadius = 0.6f, shellThickness = 0.15f,
+                brightness = 0.58f, radius = 5f, density = 0.9f, noiseScale = 0.7f, filament = 0.8f,
+                threshold = 0.3f, dust = 0.45f, shellRadius = 0.6f, shellThickness = 0.11f,
                 stretch = new Vector3(1.12f, 0.9f, 1.0f),
                 starBright = new Color(0.9f, 0.95f, 1.1f), starField = new Color(0.9f, 0.9f, 1.0f),
                 brightN = 0, fieldN = 22, coreFrac = 1.6f,
-                bgRotation = 175f, bgTint = new Color(0.36f, 0.37f, 0.4f),
+                bgDim = 0.65f, bgRotation = 175f, bgTint = new Color(0.36f, 0.37f, 0.4f),
                 name = () => Loc.T("고리 성운 (M57)", "The Ring Nebula (M57)", "環状星雲 (M57)", "环状星云 (M57)"),
                 facts = () => Loc.T("행성상성운 · 2,570광년 · 지름 1광년 · 태양 같은 별의 죽음",
                                     "Planetary nebula · 2,570 ly · 1 ly across · a Sun-like star's death",
@@ -128,13 +144,13 @@ namespace MilkyWay
 
             // 5) Crab Nebula — supernova remnant
             new Hero {
-                id = "Crab", form = Form.Nebula, position = new Vector3(-22, 18, 34), framing = 3.4f,
+                id = "Crab", form = Form.Nebula, position = new Vector3(-22, 18, 34), framing = 3.65f,
                 type = 3, color1 = new Color(2.3f, 0.95f, 0.35f), color2 = new Color(0.4f, 1.6f, 1.0f),
-                brightness = 0.42f, radius = 7f, density = 1.2f, noiseScale = 0.5f, filament = 1.5f,
+                brightness = 0.52f, radius = 7f, density = 1.2f, noiseScale = 0.5f, filament = 1.7f,
                 threshold = 0.35f, dust = 0.5f, stretch = new Vector3(1.35f, 0.82f, 1.0f),
                 starBright = new Color(0.7f, 0.85f, 1.3f), starField = new Color(1.1f, 1.0f, 0.95f),
                 brightN = 1, fieldN = 40, coreFrac = 0.06f,
-                bgRotation = 265f, bgTint = new Color(0.4f, 0.37f, 0.34f),
+                bgDim = 0.6f, bgRotation = 265f, bgTint = new Color(0.4f, 0.37f, 0.34f),
                 name = () => Loc.T("게 성운 (M1)", "The Crab Nebula (M1)", "かに星雲 (M1)", "蟹状星云 (M1)"),
                 facts = () => Loc.T("초신성 잔해 · 6,500광년 · 1054년 폭발 기록 · 중심에 펄서",
                                     "Supernova remnant · 6,500 ly · seen exploding in 1054 · a pulsar within",
@@ -147,8 +163,11 @@ namespace MilkyWay
 
             // 6) Omega Centauri — globular cluster
             new Hero {
+                // The original big volumetric presentation: close framing, large
+                // punchy stars, panoramic sky only (the DSS2 plates seam right
+                // beside ω Cen, so no photo backdrop for this one).
                 id = "OmegaCen", form = Form.Cluster, position = new Vector3(56, 12, 18), framing = 3.4f,
-                clusterKind = ClusterField.Kind.Globular, clusterStars = 6000, clusterRadius = 8f,
+                clusterKind = ClusterField.Kind.Globular, clusterStars = 9000, clusterRadius = 8f,
                 bgRotation = 310f, bgTint = new Color(0.35f, 0.37f, 0.42f),
                 name = () => Loc.T("오메가 센타우리", "Omega Centauri", "オメガ星団", "半人马座ω星团"),
                 facts = () => Loc.T("구상성단 · 17,000광년 · 120억 살 · 별 약 1,000만 개",

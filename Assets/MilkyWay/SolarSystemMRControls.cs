@@ -79,8 +79,10 @@ namespace MilkyWay
                     () => LoadScene("BlackHoleMR")),
                 (() => Loc.T("은하 전시", "Milky Way", "銀河展示", "银河展区"),
                     () => LoadScene("MilkyWayMR")),
+                (() => Loc.T("성운 전시", "Nebulae", "星雲展示", "星云展区"),
+                    () => LoadScene("NebulaMR")),
                 (() => Loc.T("처음으로", "Title", "最初へ", "回标题"),
-                    () => LoadScene("TitleScreen")),
+                    () => LoadScene("MRTitle")),
             };
 
             BuildRow(canvas.transform, "Solar MR Menu", actions, 26f + RowPitch);

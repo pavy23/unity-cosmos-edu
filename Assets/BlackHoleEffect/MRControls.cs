@@ -96,7 +96,8 @@ namespace BlackHoleEffect
             {
                 (() => Loc.T("은하 전시", "Milky Way", "銀河展示", "银河展区"), () => LoadScene("MilkyWayMR")),
                 (() => Loc.T("태양계 전시", "Solar system", "太陽系展示", "太阳系展区"), () => LoadScene("SolarSystemMR")),
-                (() => Loc.T("처음으로", "Title", "最初へ", "回标题"), () => LoadScene("TitleScreen")),
+                (() => Loc.T("성운 전시", "Nebulae", "星雲展示", "星云展区"), () => LoadScene("NebulaMR")),
+                (() => Loc.T("처음으로", "Title", "最初へ", "回标题"), () => LoadScene("MRTitle")),
             };
 
             BuildRow(canvas.transform, "MR Menu Experiences", experiences, 26f + RowPitch * 3f);

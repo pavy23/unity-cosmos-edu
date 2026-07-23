@@ -1,0 +1,48 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Crab_NebMR
+  m_Shader: {fileID: 4800000, guid: afdf60ba7be683a489311f9d03053260, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _DustMask:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _Brightness: 0.52
+    - _Density: 1.2
+    - _DustStrength: 0.5
+    - _Filament: 1.7
+    - _NebulaType: 3
+    - _NoiseScale: 0.5
+    - _OccludeBg: 1
+    - _Radius: 7
+    - _ShellRadius: 0.6
+    - _ShellThickness: 0.1
+    - _Steps: 64
+    - _Threshold: 0.35
+    m_Colors:
+    - _Color1: {r: 2.3, g: 0.95, b: 0.35, a: 1}
+    - _Color2: {r: 0.4, g: 1.6, b: 1, a: 1}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1

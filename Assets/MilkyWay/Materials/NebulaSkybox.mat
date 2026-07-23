@@ -37,7 +37,7 @@ Material:
     - _Layout: 0
     - _Mapping: 1
     - _MirrorOnBack: 0
-    - _Rotation: 0
+    - _Rotation: 310
     - _StarDensity: 0.55
     m_Colors:
     - _BandAxis: {r: 0, g: 1, b: 0, a: 0}

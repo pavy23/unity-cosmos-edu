@@ -151,6 +151,12 @@ float3 bh_starField(float3 rd, float density, float nebula, float bandStrength)
         float3 tint = bh_starTint(temp);
         bright *= lerp(0.8, 1.6, temp); // hot stars really are brighter
 
+        // Gentle scintillation: every star breathes on its own phase and rate,
+        // so the sky shimmers without ever pulsing in sync. Subtle by design —
+        // ±15% reads as atmosphere, more reads as fairy lights. Shared code, so
+        // the lensed background twinkles in step with the sky around it.
+        bright *= 1.0 + 0.15 * sin(_Time.y * (1.2 + 2.4 * h.x) + h.y * 6.2832 + h.z * 3.1);
+
         // Gaussian PSF core + a modest halo so bright stars glow. The halo
         // must die out well inside the grid cell, otherwise it gets truncated
         // at the cell border and shows up as square patches.

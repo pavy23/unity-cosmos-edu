@@ -39,3 +39,6 @@ crashlytics-build.properties
 /[Ss]napshots/
 /Assets/Screenshots/
 /Assets/Screenshots.meta
+
+# unity-mcp runtime scratch
+/.utmp/

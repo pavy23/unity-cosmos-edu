@@ -1,0 +1,5 @@
+DeepSky backdrops: Digitized Sky Survey 2 (DSS2) colour cutouts.
+Produced with the CDS hips2fits service (https://alasky.cds.unistra.fr/hips-image-services/hips2fits).
+DSS is based on photographic data obtained with the Oschin Schmidt Telescope (Palomar) and the UK Schmidt Telescope,
+produced at the Space Telescope Science Institute under U.S. Government grant NAG W-2166 (NASA/STScI).
+Each bg_<id>.jpg / hero_<id>.jpg is a TAN-projection cutout centred on the object's real J2000 coordinates.

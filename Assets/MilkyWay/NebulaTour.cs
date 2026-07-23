@@ -23,7 +23,7 @@ namespace MilkyWay
         int step;
 
         RectTransform card;
-        Text cardTitle, cardBody, cardFooter;
+        Text cardTitle, cardBody, cardConcept, cardFooter;
 
         struct Step { public int specimen; public string title, titleEn, titleJa, titleZh; }
 
@@ -86,6 +86,26 @@ namespace MilkyWay
             "而这里，是幸存者。半人马座ω星团是数百万颗古老恒星的集群，诞生于一百二十亿年前、银河系尚且年轻之时。爆炸的恒星留下的气体重新化为星云，又从那片星云中诞生出新的恒星。恒星的一生，就是这样一个宏大的循环。",
         };
 
+        // Shared with the MR tour (same clips, same order, same titles).
+        public static int StepCount => Steps.Length;
+        public static int StepSpecimen(int i) => Steps[i].specimen;
+        public static string StepTitle(int i)
+        {
+            var s = Steps[i];
+            if (i == 2) return Loc.T("3. 새별의 무리 — 질량이 운명을 가릅니다",
+                                     "3. Newborn Stars — Mass Sets the Path", s.titleJa, s.titleZh);
+            if (i == 5) return Loc.T("6. 오래된 별들의 기록, 그리고 순환",
+                                     "6. Ancient Stars, and the Cycle", s.titleJa, s.titleZh);
+            return Loc.T(s.title, s.titleEn, s.titleJa, s.titleZh);
+        }
+
+        void Start()
+        {
+            var keys = new string[StepCount];
+            for (int i = 0; i < keys.Length; i++) keys[i] = "neb_life_" + i;
+            NarrationManager.Instance.Preload(keys);
+        }
+
         public void StartTour()
         {
             if (Running || controller == null || gallery == null) return;
@@ -119,9 +139,20 @@ namespace MilkyWay
 
             EnsureCard();
             card.gameObject.SetActive(true);
-            cardTitle.text = Loc.T(s.title, s.titleEn, s.titleJa, s.titleZh);
+            cardTitle.text = StepTitle(step);
             cardBody.text = Loc.T(NarrationLines[step], NarrationLinesEn[step],
                                   NarrationLinesJa[step], NarrationLinesZh[step]);
+            cardBody.rectTransform.sizeDelta = new Vector2(1060f, (step == 2 || step == 5) ? 98f : 130f);
+
+            string massNote = "Key branch: mass sets the path — Sun-like → planetary nebula / white dwarf · massive → supernova / neutron star or black hole";
+            string archiveNote = "Caution: a globular cluster is an old stellar population, not one star's final stage; gas and elements are what cycle.";
+            cardConcept.text = step == 2
+                ? Loc.T("핵심 분기: 질량이 운명을 결정 — 태양형 → 행성상성운·백색왜성 · 고질량 → 초신성·중성자별/블랙홀",
+                        massNote, massNote, massNote)
+                : step == 5
+                    ? Loc.T("주의: 구상성단은 한 별의 최종 단계가 아니라 오래된 별 집단입니다. 순환하는 것은 가스와 원소입니다.",
+                            archiveNote, archiveNote, archiveNote)
+                    : string.Empty;
             cardFooter.text = Loc.T("→ 다음    ← 이전    Esc 종료",
                                     "→ Next    ← Prev    Esc End",
                                     "→ 次へ    ← 前へ    Esc 終了",
@@ -159,8 +190,12 @@ namespace MilkyWay
                 new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(30f, -18f), new Vector2(1060f, 38f), FontStyle.Bold);
 
             cardBody = BlackHoleUI.MakeText(card, "Body", 20, BlackHoleUI.TextPrimary, TextAnchor.UpperLeft,
-                new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(30f, -62f), new Vector2(1060f, 130f));
+                new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(30f, -62f), new Vector2(1060f, 98f));
             cardBody.horizontalOverflow = HorizontalWrapMode.Wrap;
+
+            cardConcept = BlackHoleUI.MakeText(card, "Concept", 15, BlackHoleUI.TitleGold, TextAnchor.UpperLeft,
+                new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(30f, -163f), new Vector2(1060f, 28f));
+            cardConcept.horizontalOverflow = HorizontalWrapMode.Wrap;
 
             cardFooter = BlackHoleUI.MakeText(card, "Footer", 15, BlackHoleUI.TextSecondary, TextAnchor.LowerLeft,
                 new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(30f, 12f), new Vector2(1060f, 22f));

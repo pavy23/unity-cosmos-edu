@@ -22,12 +22,16 @@ Material:
   m_LockedProperties: 
   m_SavedProperties:
     serializedVersion: 3
-    m_TexEnvs: []
+    m_TexEnvs:
+    - _DustMask:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _Brightness: 1.5
-    - _Density: 0.95
-    - _DustStrength: 1.5
+    - _Brightness: 1.7
+    - _Density: 1.05
+    - _DustStrength: 1.05
     - _Filament: 1.7
     - _NebulaType: 0
     - _NoiseScale: 0.3
@@ -36,9 +40,9 @@ Material:
     - _ShellRadius: 0.6
     - _ShellThickness: 0.1
     - _Steps: 72
-    - _Threshold: 0.44
+    - _Threshold: 0.4
     m_Colors:
-    - _Color1: {r: 2.3, g: 0.5, b: 0.85, a: 1}
-    - _Color2: {r: 0.35, g: 1.7, b: 1.25, a: 1}
+    - _Color1: {r: 2.05, g: 0.32, b: 0.82, a: 1}
+    - _Color2: {r: 0.28, g: 1.05, b: 1.45, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
