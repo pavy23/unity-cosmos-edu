@@ -319,10 +319,14 @@ namespace BlackHoleEffect
             UnityEngine.Events.UnityAction next,
             UnityEngine.Events.UnityAction end)
         {
+            // Touch-sized (48 tall clears the 44 px minimum once the canvas
+            // scaler shrinks it on a phone) and glyphs the bundled pan-CJK
+            // font actually has: ✕ (U+2715, Dingbats) is NOT in Noto Sans KR
+            // and rendered as an empty button — × (U+00D7) is.
             var br = new Vector2(1f, 0f);
-            MakeButton(card, "TourPrev", "◀", br, br, new Vector2(-250f, 12f), new Vector2(60f, 34f), prev);
-            MakeButton(card, "TourNext", "▶", br, br, new Vector2(-180f, 12f), new Vector2(60f, 34f), next);
-            MakeButton(card, "TourEnd", "✕", br, br, new Vector2(-110f, 12f), new Vector2(60f, 34f), end);
+            MakeButton(card, "TourPrev", "◀", br, br, new Vector2(-260f, 12f), new Vector2(76f, 48f), prev);
+            MakeButton(card, "TourNext", "▶", br, br, new Vector2(-176f, 12f), new Vector2(76f, 48f), next);
+            MakeButton(card, "TourEnd", "×", br, br, new Vector2(-92f, 12f), new Vector2(76f, 48f), end);
         }
 
         /// <summary>

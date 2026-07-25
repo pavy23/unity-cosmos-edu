@@ -209,11 +209,11 @@ namespace BlackHoleEffect
             if (controls != null) controls.SetImmersive(true);
             ShowStop(true);
 
-            // In MR, trade the room for space before anything else: the disk is
-            // about to disperse, and a bare hole against passthrough is invisible.
-            if (spaceWindow != null) yield return spaceWindow.Open(1.2f);
-
             // --- save the exploration state -------------------------------
+            // Before the first yield, not after: Abort() restores these
+            // unconditionally, and the MR window fade below is 1.2 s of
+            // Stop-button-reachable time. Saving late meant an early abort
+            // wrote zeros back and the hole vanished for good.
             savedSpin = controller.spin;
             savedInner = controller.diskInnerRadius;
             savedScale = controller.transform.localScale;
@@ -231,6 +231,10 @@ namespace BlackHoleEffect
                 savedSkyStar = sky.GetFloat("_StarDensity");
                 savedSkyNebula = sky.GetFloat("_NebulaIntensity");
             }
+
+            // In MR, trade the room for space before anything else: the disk is
+            // about to disperse, and a bare hole against passthrough is invisible.
+            if (spaceWindow != null) yield return spaceWindow.Open(1.2f);
 
             controller.spin = 0f;                      // superposition path is Schwarzschild
             mTotal = primaryMass * (1f + massRatio);

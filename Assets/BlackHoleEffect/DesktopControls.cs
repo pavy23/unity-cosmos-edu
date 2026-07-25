@@ -7,13 +7,13 @@ using UnityEngine.InputSystem;
 namespace BlackHoleEffect
 {
     /// <summary>
-    /// Keyboard + mouse control for the desktop showcase (play mode).
+    /// Pointer control for the desktop/web showcase (play mode).
     ///
-    ///   체험(F키)     F1 투어 · F2 탄생 · F3 낙하 · F4 병합
-    ///   블랙홀(숫자)  1 색상 · 2 질량 · 3 스핀 · 4 관측사진
-    ///   현상(알파벳)  Space 광자 · E 링(A/D) · T 조석 · J 제트 · G 렌즈 · V 광도
-    ///   조작(알파벳)  우클릭 회전 · 휠/W/S 줌 · R 리셋 · L 라벨 · I 패널 · X 수식
-    ///                 U 몰입 · M 소리 · K 언어 · P 성능 · F12 스냅샷 · H 도움말 · C 난이도
+    /// Every feature is a toolbar button (see DesktopToolbar) — the hotkey
+    /// layer was removed so the exhibit works in a browser and on a phone,
+    /// where keys either collide with the browser or don't exist. What is
+    /// left: right-drag or one-finger drag to orbit, wheel or pinch to zoom,
+    /// ← → to step a running tour, Esc to leave immersive view.
     /// </summary>
     [RequireComponent(typeof(Camera))]
     public class DesktopControls : MonoBehaviour
@@ -96,7 +96,6 @@ namespace BlackHoleEffect
         /// rebuilt per frame — used by K and the startup language picker.</summary>
         public void RefreshLanguage()
         {
-            UpdateHelpText();
             if (tour != null) tour.OnLanguageChanged();
             if (panel != null) panel.RefreshText();
         }
@@ -144,10 +143,10 @@ namespace BlackHoleEffect
             if (!einsteinDemo.active) { ExplainCard.Hide(); return; }
             ExplainCard.Show(
                 Loc.T("아인슈타인 링", "Einstein Ring", "アインシュタインリング", "爱因斯坦环"),
-                Loc.T("블랙홀 뒤의 별빛이 중력에 휘어 두 개의 상으로 갈라져 보입니다. 별이 정확히 뒤에 정렬되는 순간, 빛이 사방으로 휘어 완전한 고리가 됩니다. A/D로 별을 직접 움직여 보세요.",
-                      "Light from a star behind the hole is split into two images. At exact alignment the light bends around every side at once and becomes a complete ring. Move the star yourself with A/D.",
-                      "ブラックホールの後ろの星の光は、ふたつの像に分かれて見えます。星が真後ろに整列した瞬間、光が全方向に曲がり、完全なリングになります。A/Dで星を動かせます。",
-                      "黑洞后方的星光被分成两个像。当恰好对齐时，光从四面八方弯过来，成为完整的光环。可用A/D亲自移动星星。"));
+                Loc.T("블랙홀 뒤의 별빛이 중력에 휘어 두 개의 상으로 갈라져 보입니다. 별이 정확히 뒤에 정렬되는 순간, 빛이 사방으로 휘어 완전한 고리가 됩니다.",
+                      "Light from a star behind the hole is split into two images. At exact alignment the light bends around every side at once and becomes a complete ring.",
+                      "ブラックホールの後ろの星の光は、ふたつの像に分かれて見えます。星が真後ろに整列した瞬間、光が全方向に曲がり、完全なリングになります。",
+                      "黑洞后方的星光被分成两个像。当恰好对齐时，光从四面八方弯过来，成为完整的光环。"));
         }
 
         public void ToggleSpaghetti()
@@ -183,10 +182,10 @@ namespace BlackHoleEffect
             if (!lightCurve.show) { ExplainCard.Hide(); return; }
             ExplainCard.Show(
                 Loc.T("광도 곡선", "Light Curve", "光度曲線", "光变曲线"),
-                Loc.T("원반 전체의 밝기를 시간에 따라 기록한 그래프입니다. 실제 망원경이 블랙홀을 '보는' 방법이죠. T로 별을 찢어 보세요 — 밝기가 치솟는 조석파괴사건(TDE)이 그래프에 나타납니다.",
-                      "A record of the disk's total brightness over time — this is how real telescopes 'see' black holes. Try tearing a star apart (T): a tidal disruption flare will spike the curve.",
-                      "円盤全体の明るさを時間で記録したグラフです。実際の望遠鏡はこうやってブラックホールを『見て』います。Tで星を裂いてみてください — 潮汐破壊イベントの増光が現れます。",
-                      "记录吸积盘总亮度随时间变化的图线——真实望远镜正是这样'看'黑洞的。试试按T撕裂恒星：曲线上会出现潮汐瓦解耀发。"));
+                Loc.T("원반 전체의 밝기를 시간에 따라 기록한 그래프입니다. 실제 망원경이 블랙홀을 '보는' 방법이죠. '스파게티화'로 별을 찢어 보세요 — 밝기가 치솟는 조석파괴사건(TDE)이 그래프에 나타납니다.",
+                      "A record of the disk's total brightness over time — this is how real telescopes 'see' black holes. Tear a star apart with 'Spaghettify': a tidal disruption flare will spike the curve.",
+                      "円盤全体の明るさを時間で記録したグラフです。実際の望遠鏡はこうやってブラックホールを『見て』います。「スパゲッティ化」で星を裂いてみてください — 潮汐破壊イベントの増光が現れます。",
+                      "记录吸积盘总亮度随时间变化的图线——真实望远镜正是这样'看'黑洞的。用「面条化」撕裂恒星：曲线上会出现潮汐瓦解耀发。"));
         }
 
         public void ToggleLens()
@@ -261,23 +260,26 @@ namespace BlackHoleEffect
         float yaw, pitch, distance;
         Vector3 initialPos;
         Quaternion initialRot;
-        UnityEngine.UI.Text help;
-        GameObject helpBar;
-        bool showHelp = true;
         bool immersive;
 
         /// <summary>Full immersion: hides every overlay and label at once (U key).</summary>
         // ---- toolbar entry points (the click-only UI calls these; the guard
         // logic that used to live in the hotkey reader lives here now) --------
+        /// <summary>The lens magnifier switches the disk off and owns the
+        /// Einstein-ring star. It is a toggle, not a cinematic, so it does not
+        /// block a narrated experience — but leaving it on under one narrates
+        /// "the glowing disk" over an empty hole. Every experience clears it.</summary>
+        void ClearLens() { if (lensDemo != null && lensDemo.Active) lensDemo.Toggle(); }
+
         public void ToggleTour()
         {
             if (tour == null) return;
             if (tour.Running) tour.StopTour();
-            else if (!CinematicBusy) tour.StartTour();
+            else if (!CinematicBusy) { ClearLens(); tour.StartTour(); }
         }
-        public void PlayIntro() { if (intro != null && !CinematicBusy) intro.Play(); }
-        public void BeginFallIn() { if (fallIn != null && !CinematicBusy) fallIn.Begin(); }
-        public void BeginMerger() { if (binary != null && !CinematicBusy) binary.Begin(); }
+        public void PlayIntro() { if (intro != null && !CinematicBusy) { ClearLens(); intro.Play(); } }
+        public void BeginFallIn() { if (fallIn != null && !CinematicBusy) { ClearLens(); fallIn.Begin(); } }
+        public void BeginMerger() { if (binary != null && !CinematicBusy) { ClearLens(); binary.Begin(); } }
         public void ToggleLabels() { if (annotations != null) annotations.showLabels = !annotations.showLabels; }
         public void TogglePanel() { if (panel != null) { panel.show = !panel.show; panel.RefreshText(); } }
         public void ToggleHud() { if (hud != null) hud.show = !hud.show; }
@@ -293,7 +295,6 @@ namespace BlackHoleEffect
         public void SetImmersive(bool on)
         {
             immersive = on;
-            showHelp = !on;
             if (panel != null) { panel.show = !on; panel.RefreshText(); }
             if (comparison != null && on) { comparison.show = false; comparison.Refresh(); }
             if (annotations != null) annotations.showLabels = !on;
@@ -532,75 +533,6 @@ namespace BlackHoleEffect
             if (autoOrbit != null) autoOrbit.enabled = true;
         }
 
-        void BuildHelp()
-        {
-            // The bar is a keyboard legend, and an MR visitor has no keyboard —
-            // MRControls puts its button menu along this same bottom strip.
-            if (xrMode) return;
-            var canvas = BlackHoleUI.EnsureCanvas(GetComponent<Camera>());
-            // Two compact rows + wrap; the bar height then hugs whatever the
-            // current language actually needs (see UpdateHelpText).
-            var bar = BlackHoleUI.MakePanel(canvas.transform, "Help Bar",
-                new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 18f), new Vector2(1600f, 62f),
-                accentLine: false);
-            helpBar = bar.gameObject;
 
-            help = BlackHoleUI.MakeText(bar, "Help Text", 15, BlackHoleUI.TextSecondary, TextAnchor.MiddleCenter,
-                new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1560f, 54f));
-            help.horizontalOverflow = HorizontalWrapMode.Wrap;
-            UpdateHelpText();
-        }
-
-        static string Key(string k) => "<color=#FFC46E>" + k + "</color> ";
-        static string Cat(string s) => "<color=#6F7A8C><b>" + s + "</b></color>   ";
-
-        void UpdateHelpText()
-        {
-            if (help == null) return;
-            // Four category rows: controls / experiences / black-hole setup /
-            // phenomenon toggles — matching how the features are actually used.
-            help.text = Loc.T(
-                Cat("체험") + Key("F1") + "가이드 투어(N/B)  " + Key("F2") + "블랙홀 탄생  " + Key("F3") + "낙하 체험  " + Key("F4") + "블랙홀 병합  " + Key("F9") + "우리은하 전시로\n"
-                + Cat("블랙홀") + Key("1") + "원반 색상  " + Key("2") + "질량  " + Key("3") + "스핀  " + Key("4") + "관측사진\n"
-                + Cat("현상") + Key("Space") + "광자 발사/지우기  " + Key("E") + "아인슈타인 링(A/D)  " + Key("T") + "스파게티화  "
-                    + Key("J") + "제트  " + Key("G") + "렌즈  " + Key("V") + "광도곡선\n"
-                + Cat("조작") + Key("우클릭") + "회전  " + Key("휠·W/S") + "줌  " + Key("R") + "리셋  " + Key("L") + "라벨  " + Key("I") + "패널  "
-                    + Key("X") + "수식  " + Key("U") + "몰입  " + Key("M") + "소리  " + Key("K") + "언어  " + Key("P") + "성능  "
-                    + Key("F10") + "처음으로  " + Key("F12") + "스냅샷  " + Key("H") + "도움말  " + Key("C") + "설명 난이도",
-
-                Cat("Experiences") + Key("F1") + "guided tour(N/B)  " + Key("F2") + "birth of a hole  " + Key("F3") + "fall in  " + Key("F4") + "merger  " + Key("F9") + "to the Milky Way\n"
-                + Cat("Black hole") + Key("1") + "disk colors  " + Key("2") + "mass  " + Key("3") + "spin  " + Key("4") + "EHT photo\n"
-                + Cat("Phenomena") + Key("Space") + "photons fire/clear  " + Key("E") + "Einstein ring(A/D)  " + Key("T") + "spaghettify  "
-                    + Key("J") + "jets  " + Key("G") + "lens  " + Key("V") + "light curve\n"
-                + Cat("Controls") + Key("RMB") + "orbit  " + Key("Wheel·W/S") + "zoom  " + Key("R") + "reset  " + Key("L") + "labels  " + Key("I") + "panel  "
-                    + Key("X") + "math  " + Key("U") + "immersive  " + Key("M") + "sound  " + Key("K") + "language  " + Key("P") + "perf  "
-                    + Key("F10") + "title  " + Key("F12") + "snapshot  " + Key("H") + "help  " + Key("C") + "level",
-
-                Cat("体験") + Key("F1") + "ガイドツアー(N/B)  " + Key("F2") + "誕生  " + Key("F3") + "落下体験  " + Key("F4") + "合体  " + Key("F9") + "天の川展示へ\n"
-                + Cat("ブラックホール") + Key("1") + "円盤の色  " + Key("2") + "質量  " + Key("3") + "スピン  " + Key("4") + "観測写真\n"
-                + Cat("現象") + Key("Space") + "光子 発射/消去  " + Key("E") + "アインシュタインリング(A/D)  " + Key("T") + "スパゲッティ化  "
-                    + Key("J") + "ジェット  " + Key("G") + "レンズ  " + Key("V") + "光度曲線\n"
-                + Cat("操作") + Key("右ドラッグ") + "回転  " + Key("ホイール·W/S") + "ズーム  " + Key("R") + "リセット  " + Key("L") + "ラベル  " + Key("I") + "パネル  "
-                    + Key("X") + "数式  " + Key("U") + "没入  " + Key("M") + "音  " + Key("K") + "言語  " + Key("P") + "性能  "
-                    + Key("F10") + "最初へ  " + Key("F12") + "撮影  " + Key("H") + "ヘルプ  " + Key("C") + "難易度",
-
-                Cat("体验") + Key("F1") + "导览(N/B)  " + Key("F2") + "黑洞诞生  " + Key("F3") + "坠落体验  " + Key("F4") + "黑洞并合  " + Key("F9") + "去银河系展区\n"
-                + Cat("黑洞") + Key("1") + "盘颜色  " + Key("2") + "质量  " + Key("3") + "自旋  " + Key("4") + "观测照片\n"
-                + Cat("现象") + Key("Space") + "光子 发射/清除  " + Key("E") + "爱因斯坦环(A/D)  " + Key("T") + "面条化  "
-                    + Key("J") + "喷流  " + Key("G") + "透镜  " + Key("V") + "光变曲线\n"
-                + Cat("操作") + Key("右键") + "旋转  " + Key("滚轮·W/S") + "缩放  " + Key("R") + "重置  " + Key("L") + "标签  " + Key("I") + "面板  "
-                    + Key("X") + "公式  " + Key("U") + "沉浸  " + Key("M") + "声音  " + Key("K") + "语言  " + Key("P") + "性能  "
-                    + Key("F10") + "回标题  " + Key("F12") + "截图  " + Key("H") + "帮助  " + Key("C") + "难度");
-
-            // Size the bar to the language: preferredHeight accounts for the
-            // wrapped line count at the current rect width.
-            if (helpBar != null)
-            {
-                var barRt = helpBar.GetComponent<RectTransform>();
-                float h = Mathf.Max(help.preferredHeight, 24f);
-                help.rectTransform.sizeDelta = new Vector2(help.rectTransform.sizeDelta.x, h);
-                barRt.sizeDelta = new Vector2(barRt.sizeDelta.x, h + 20f);
-            }
-        }
     }
 }

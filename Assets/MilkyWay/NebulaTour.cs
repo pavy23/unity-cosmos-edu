@@ -153,10 +153,10 @@ namespace MilkyWay
                     ? Loc.T("주의: 구상성단은 한 별의 최종 단계가 아니라 오래된 별 집단입니다. 순환하는 것은 가스와 원소입니다.",
                             archiveNote, archiveNote, archiveNote)
                     : string.Empty;
-            cardFooter.text = Loc.T("→ 다음    ← 이전    Esc 종료",
-                                    "→ Next    ← Prev    Esc End",
-                                    "→ 次へ    ← 前へ    Esc 終了",
-                                    "→ 下一步    ← 上一步    Esc 结束")
+            cardFooter.text = Loc.T("◀ ▶ 이동    × 종료",
+                                    "◀ ▶ Step    × End",
+                                    "◀ ▶ 移動    × 終了",
+                                    "◀ ▶ 切换    × 结束")
                             + "                        " + (step + 1) + " / " + Steps.Length;
         }
 
@@ -200,13 +200,9 @@ namespace MilkyWay
             cardFooter = BlackHoleUI.MakeText(card, "Footer", 15, BlackHoleUI.TextSecondary, TextAnchor.LowerLeft,
                 new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(30f, 12f), new Vector2(1060f, 22f));
 
-            // On-card Prev / Next, mirroring the gallery buttons.
-            BlackHoleUI.MakeButton(card, "TourPrev", "◀",
-                new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(-250f, 12f), new Vector2(60f, 34f), Prev);
-            BlackHoleUI.MakeButton(card, "TourNext", "▶",
-                new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(-180f, 12f), new Vector2(60f, 34f), Next);
-            BlackHoleUI.MakeButton(card, "TourEnd", "✕",
-                new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(-110f, 12f), new Vector2(60f, 34f), StopTour);
+            // On-card Prev / Next / End — the shared factory, so every
+            // exhibit's tour card carries the same three controls.
+            BlackHoleUI.MakeTourNav(card, Prev, Next, StopTour);
         }
 
         void OnDisable() { if (Running) StopTour(); }

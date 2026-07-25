@@ -338,10 +338,10 @@ namespace MilkyWay
             cardTitle.text = Loc.T(s.title, s.titleEn, s.titleJa, s.titleZh);
             cardBody.text = Loc.T(NarrationLines[step], NarrationLinesEn[step],
                                   NarrationLinesJa[step], NarrationLinesZh[step]);
-            cardFooter.text = Loc.T("N 다음    B 이전    F8 종료",
-                                    "N Next    B Prev    F8 End",
-                                    "N 次へ    B 前へ    F8 終了",
-                                    "N 下一步    B 上一步    F8 结束")
+            cardFooter.text = Loc.T("◀ ▶ 이동    × 종료",
+                                    "◀ ▶ Step    × End",
+                                    "◀ ▶ 移動    × 終了",
+                                    "◀ ▶ 切换    × 结束")
                             + "                                  " + (step + 1) + " / " + Stops.Length;
         }
 

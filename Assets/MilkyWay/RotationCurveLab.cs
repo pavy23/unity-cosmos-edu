@@ -477,6 +477,9 @@ namespace MilkyWay
 
         void ShowStop(bool on)
         {
+            // The stop pill and the language button share the top-right
+            // corner (both anchored -26,-26): show one, hide the other.
+            LanguageSelect.SetVisible(!on);
             if (stopButton == null)
             {
                 if (!on) return;

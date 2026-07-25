@@ -145,9 +145,11 @@ namespace MilkyWay
         /// the black-hole cinematics.</summary>
         void OnDisable()
         {
-            if (!IsPlaying) return;
-            RestoreMilkyWay();
-            DestroyAndromeda();
+            // Route through Abort like every sibling cinematic: restoring the
+            // materials but leaving IsPlaying true (and the orbit disabled)
+            // wedged the whole exhibit — AnyPlaying then blocks every other
+            // experience, the toolbar stays hidden and the camera is dead.
+            if (IsPlaying) Abort();
         }
 
         void RestoreMilkyWay()
@@ -625,6 +627,9 @@ namespace MilkyWay
 
         void ShowStop(bool on)
         {
+            // The stop pill and the language button share the top-right
+            // corner (both anchored -26,-26): show one, hide the other.
+            LanguageSelect.SetVisible(!on);
             if (stopButton == null)
             {
                 if (!on) return;

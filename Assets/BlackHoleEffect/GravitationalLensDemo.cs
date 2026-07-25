@@ -44,13 +44,13 @@ namespace BlackHoleEffect
 
             Caption(Loc.T(
                 "중력 렌즈 돋보기 — 원반을 끄면 순수한 '렌즈'만 남습니다.\n" +
-                "블랙홀 뒤의 은하가 호(弧)와 링으로 늘어나며 확대됩니다. (A/D로 은하 이동, F3으로 종료)",
+                "블랙홀 뒤의 은하가 호(弧)와 링으로 늘어나며 확대됩니다. ('렌즈' 버튼을 다시 누르면 종료)",
                 "Gravitational lens magnifier — with the disk off, only the pure 'lens' remains.\n" +
-                "The galaxy behind the hole is stretched into arcs and rings. (A/D to move it, F3 to exit)",
+                "The galaxy behind the hole is stretched into arcs and rings. (press 'Lens' again to exit)",
                 "重力レンズの虫めがね — 円盤を消すと、純粋な「レンズ」だけが残ります。\n" +
-                "ブラックホールの後ろの銀河が、弧やリングに引き伸ばされて拡大されます。(A/Dで銀河移動、F3で終了)",
+                "ブラックホールの後ろの銀河が、弧やリングに引き伸ばされて拡大されます。(「レンズ」をもう一度押すと終了)",
                 "引力透镜放大镜 — 关掉吸积盘后，只剩下纯粹的“透镜”。\n" +
-                "黑洞后方的星系被拉伸成弧和圆环并被放大。(A/D移动星系，F3退出)"));
+                "黑洞后方的星系被拉伸成弧和圆环并被放大。(再按一次「透镜」退出)"));
         }
 
         void End()

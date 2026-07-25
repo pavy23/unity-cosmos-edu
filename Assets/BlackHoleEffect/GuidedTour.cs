@@ -119,8 +119,8 @@ namespace BlackHoleEffect
             new Step { focus = 3,
                 title = "4. 도플러 비밍", titleEn = "4. Doppler Beaming",
                 titleJa = "4. ドップラービーミング", titleZh = "4. 多普勒聚束",
-                hint = "1 키로 원반 색을 바꿔보세요", hintEn = "Press 1 to change disk colors",
-                hintJa = "1キーで円盤の色を変えられます", hintZh = "按1键可切换吸积盘颜色" },
+                hint = "'원반 색상' 버튼으로 색을 바꿔보세요", hintEn = "Try the 'Disk colors' button",
+                hintJa = "「円盤の色」ボタンで変えられます", hintZh = "可用「吸积盘颜色」按钮切换" },
             new Step { focus = -1,
                 title = "5. 중력 시간 지연", titleEn = "5. Gravitational Time Dilation",
                 titleJa = "5. 重力による時間の遅れ", titleZh = "5. 引力时间膨胀",
@@ -128,14 +128,14 @@ namespace BlackHoleEffect
             new Step { focus = -1,
                 title = "6. 아인슈타인 링", titleEn = "6. The Einstein Ring",
                 titleJa = "6. アインシュタインリング", titleZh = "6. 爱因斯坦环",
-                hint = "A/D로 직접 움직여보세요", hintEn = "Move it yourself with A/D",
-                hintJa = "A/Dキーで自分で動かせます", hintZh = "用A/D键亲自移动它",
+                hint = "별이 정확히 정렬되는 순간을 보세요", hintEn = "Watch the moment of exact alignment",
+                hintJa = "星がぴたりと整列する瞬間に注目", hintZh = "留意恒星正好对齐的瞬间",
                 enter = t => { if (t.einsteinDemo != null) { t.einsteinDemo.active = true; t.einsteinDemo.autoSweep = true; } } },
             new Step { focus = -1,
                 title = "7. 빛의 궤적", titleEn = "7. Light Trajectories",
                 titleJa = "7. 光の軌跡", titleZh = "7. 光的轨迹",
-                hint = "Space: 발사 / 지우기", hintEn = "Space: fire / clear",
-                hintJa = "Space: 発射 / 消去", hintZh = "空格键：发射 / 清除",
+                hint = "'광자 발사' 버튼으로 다시 쏠 수 있습니다", hintEn = "'Fire photons' sends another volley",
+                hintJa = "「光子発射」ボタンでもう一度撃てます", hintZh = "可用「发射光子」按钮再发射一次",
                 enter = t => { if (t.launcher != null) t.launcher.FireSweep(); } },
             new Step { focus = -1,
                 title = "8. 스파게티화", titleEn = "8. Spaghettification",
@@ -204,10 +204,10 @@ namespace BlackHoleEffect
             cardBody.text = body + (string.IsNullOrEmpty(hint)
                 ? "" : "\n<color=#9AA3B5>(" + hint + ")</color>");
 
-            cardFooter.text = Loc.T("N 다음    B 이전    F1 종료    X 수식",
-                                    "N Next    B Prev    F1 End    X Math",
-                                    "N 次へ    B 前へ    F1 終了    X 数式",
-                                    "N 下一步    B 上一步    F1 结束    X 公式")
+            cardFooter.text = Loc.T("◀ ▶ 이동    × 종료",
+                                    "◀ ▶ Step    × End",
+                                    "◀ ▶ 移動    × 終了",
+                                    "◀ ▶ 切换    × 结束")
                             + "                                  " + (step + 1) + " / " + Steps.Length;
         }
 

@@ -1,0 +1,11 @@
+/Build/WebGL.data.gz
+  Content-Encoding: gzip
+  Content-Type: application/octet-stream
+
+/Build/WebGL.framework.js.gz
+  Content-Encoding: gzip
+  Content-Type: application/javascript
+
+/Build/WebGL.wasm.gz
+  Content-Encoding: gzip
+  Content-Type: application/wasm

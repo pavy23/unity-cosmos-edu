@@ -142,13 +142,13 @@ namespace BlackHoleEffect
                 bodyZh = "爱因斯坦场方程 — 左边是时空的曲率，右边是物质与能量。\n“物质告诉时空如何弯曲，时空告诉物质如何运动。”" },
             new Card { title = "지금 보고 있는 것",
                 formula = "d²x/dλ² = −(3/2) h² x / r⁵ ,    I_obs = (δ·g)³ I_em",
-                body = "상의 기하(그림자·고리·렌즈 상)는 측지선 적분, 밝기와 색은 상대론적\n편이의 결과입니다. 투어(G)를 켜면 단계마다 해당 수식이 여기 표시됩니다.",
+                body = "상의 기하(그림자·고리·렌즈 상)는 측지선 적분, 밝기와 색은 상대론적\n편이의 결과입니다. 가이드 투어를 켜면 단계마다 해당 수식이 여기 표시됩니다.",
                 titleEn = "What You Are Looking At",
-                bodyEn = "The image geometry (shadow, rings, lensed arcs) comes from geodesic integration;\nbrightness and color from relativistic shifts. Start the tour (G) for per-step equations.",
+                bodyEn = "The image geometry (shadow, rings, lensed arcs) comes from geodesic integration;\nbrightness and color from relativistic shifts. Start the guided tour for per-step equations.",
                 titleJa = "いま見ているもの",
-                bodyJa = "像の形（影・リング・レンズ像）は測地線の積分、明るさと色は相対論的\n偏移の結果です。ツアー(G)を始めると、各ステップの数式がここに表示されます。",
+                bodyJa = "像の形（影・リング・レンズ像）は測地線の積分、明るさと色は相対論的\n偏移の結果です。ガイドツアーを始めると、各ステップの数式がここに表示されます。",
                 titleZh = "你正在看的东西",
-                bodyZh = "图像的几何（阴影、光环、透镜像）来自测地线积分；亮度与颜色来自相对论\n偏移。开启导览(G)后，每一步的公式都会显示在这里。" },
+                bodyZh = "图像的几何（阴影、光环、透镜像）来自测地线积分；亮度与颜色来自相对论\n偏移。开启导览后，每一步的公式都会显示在这里。" },
             new Card { title = "중력파 병합 — 시공간의 소리",
                 formula = "f_GW = 2 f_orb ,    ℳ = (m₁m₂)^(3/5) ⁄ (m₁+m₂)^(1/5)",
                 body = "중력파 진동수는 공전의 2배로 올라가는 '처프'입니다(지금 소리가 실제 궤도와 동기화). 파형을 결정하는 것이 처프 질량 ℳ. 병합 후 질량의 ~5%가 파동으로 방출됩니다. (이중 렌징은 중첩 근사)",
@@ -221,8 +221,9 @@ namespace BlackHoleEffect
             panel = BlackHoleUI.MakePanel(canvas.transform, "Theory Panel",
                 new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-28f, -28f), new Vector2(470f, 200f));
 
+            // 370 not 430: the close button now occupies the top-right corner.
             title = BlackHoleUI.MakeText(panel, "Title", 18, BlackHoleUI.TitleGold, TextAnchor.UpperLeft,
-                new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(22f, -14f), new Vector2(430f, 26f), FontStyle.Bold);
+                new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(22f, -14f), new Vector2(370f, 26f), FontStyle.Bold);
 
             formula = BlackHoleUI.MakeText(panel, "Formula", 21, BlackHoleUI.Accent, TextAnchor.MiddleCenter,
                 new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -46f), new Vector2(430f, 50f), FontStyle.Bold);
@@ -231,10 +232,16 @@ namespace BlackHoleEffect
                 new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(22f, -102f), new Vector2(430f, 70f));
             body.horizontalOverflow = HorizontalWrapMode.Wrap; // long lines stay inside the card
 
-            hint = BlackHoleUI.MakeText(panel, "Hint", 12, BlackHoleUI.TextSecondary, TextAnchor.LowerRight,
-                new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(-16f, 8f), new Vector2(200f, 16f));
-            hint.text = Loc.T("X 닫기 · C 난이도", "X close · C level",
-                              "X 閉じる · C 難易度", "X 关闭 · C 难度");
+            hint = BlackHoleUI.MakeText(panel, "Hint", 13, BlackHoleUI.TextSecondary, TextAnchor.LowerLeft,
+                new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(22f, 8f), new Vector2(260f, 18f));
+            hint.text = Loc.T("'설명 난이도'로 깊이를 바꿉니다", "'Level' changes the depth",
+                              "「難易度」で深さを変えられます", "用「难度」切换深度");
+
+            // A real close control: the hint used to promise an X key that was
+            // never bound, and the panel covers the top-right corner.
+            BlackHoleUI.MakeButton(panel, "Theory Close", "×",
+                new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-10f, -10f),
+                new Vector2(48f, 48f), () => SetVisible(false));
         }
     }
 }

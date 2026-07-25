@@ -341,10 +341,10 @@ namespace MilkyWay
             cardFacts.text = Loc.T(Facts[step], FactsEn[step], FactsJa[step], FactsZh[step]);
             cardBody.text = Loc.T(NarrationLines[step], NarrationLinesEn[step],
                                   NarrationLinesJa[step], NarrationLinesZh[step]);
-            cardFooter.text = Loc.T("N 다음    B 이전    " + toggleKeyLabel + " 종료",
-                                    "N Next    B Prev    " + toggleKeyLabel + " End",
-                                    "N 次へ    B 前へ    " + toggleKeyLabel + " 終了",
-                                    "N 下一步    B 上一步    " + toggleKeyLabel + " 结束")
+            cardFooter.text = Loc.T("◀ ▶ 이동    × 종료    드래그로 돌려보기",
+                                    "◀ ▶ Step    × End    Drag to turn",
+                                    "◀ ▶ 移動    × 終了    ドラッグで回転",
+                                    "◀ ▶ 切换    × 结束    拖动旋转")
                             + "                                  " + (step + 1) + " / " + Stops.Length;
         }
 
@@ -379,6 +379,16 @@ namespace MilkyWay
                     dy = Input.GetAxis("Mouse Y") * 12f;
                 }
 #endif
+                // Touch: the tour owns the camera while it runs, so the
+                // exhibit-wide one-finger drag has to be honoured here too —
+                // otherwise tapping a planet on a phone strands the visitor
+                // in a view they cannot turn.
+                if (BlackHoleEffect.TouchOrbit.Dragging)
+                {
+                    dragging = true;
+                    var td = BlackHoleEffect.TouchOrbit.DragDelta;
+                    dx += td.x; dy += td.y;
+                }
             }
             if (dragging)
             {

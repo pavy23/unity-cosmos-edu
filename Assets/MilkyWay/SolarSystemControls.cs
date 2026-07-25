@@ -8,9 +8,10 @@ using UnityEngine.InputSystem;
 namespace MilkyWay
 {
     /// <summary>
-    /// Keyboard + mouse control for the solar-system exhibit.
-    ///   F1 planet tour (N/B)  ·  F2 the scale truth  ·  F9 to the Milky Way
-    ///   우클릭 회전 · 휠 줌(로그) · M 소리 · K 언어 · H 도움말
+    /// Pointer control for the solar-system exhibit. The tour and the scale
+    /// lesson are toolbar buttons (SolarToolbar); here: right-drag / one-finger
+    /// drag to orbit, wheel or pinch to zoom (log), click or tap a planet to
+    /// jump to its tour stop, ← → to step a running tour.
     /// Same orbit-layering trick as the other exhibits: re-sync from the
     /// transform each input frame so ambient drift and the user's drag
     /// compose instead of fighting.
@@ -46,10 +47,6 @@ namespace MilkyWay
 
         float distance, yaw, pitch;
         bool immersive;
-        GameObject helpBar;
-        Text help;
-        bool showHelp = true;
-        int helpLocVersion = -1;
 
         void Start()
         {
@@ -312,35 +309,6 @@ namespace MilkyWay
             transform.LookAt(Vector3.zero);
         }
 
-        void BuildHelp()
-        {
-            var canvas = BlackHoleUI.EnsureCanvas(GetComponent<Camera>());
-            var bar = BlackHoleUI.MakePanel(canvas.transform, "Sol Help Bar",
-                new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 18f), new Vector2(1240f, 40f),
-                accentLine: false);
-            helpBar = bar.gameObject;
-            help = BlackHoleUI.MakeText(bar, "Text", 15, BlackHoleUI.TextSecondary, TextAnchor.MiddleCenter,
-                new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1200f, 32f));
-            UpdateHelpText();
-        }
 
-        void OnDestroy()
-        {
-            Loc.Changed -= OnLocChanged;
-            if (hoverMat != null) Destroy(hoverMat);
-            if (ringTex != null) Destroy(ringTex);
-        }
-
-        static string Key(string k) => "<color=#FFC46E>" + k + "</color> ";
-
-        void UpdateHelpText()
-        {
-            if (help == null) return;
-            help.text = Loc.T(
-                Key("클릭") + "행성 줌인   " + Key("F1") + "행성 투어(N/B)   " + Key("F2") + "진짜 크기   " + Key("F9") + "우리은하 전시로   " + Key("F10") + "처음으로   " + Key("우클릭") + "회전   " + Key("휠") + "줌   " + Key("M") + "소리   " + Key("K") + "언어   " + Key("H") + "도움말",
-                Key("Click") + "zoom to planet   " + Key("F1") + "planet tour(N/B)   " + Key("F2") + "the true scale   " + Key("F9") + "to the Milky Way   " + Key("F10") + "title   " + Key("R-drag") + "orbit   " + Key("wheel") + "zoom   " + Key("M") + "sound   " + Key("K") + "language   " + Key("H") + "help",
-                Key("クリック") + "惑星ズーム   " + Key("F1") + "惑星ツアー(N/B)   " + Key("F2") + "本当の縮尺   " + Key("F9") + "天の川展示へ   " + Key("F10") + "最初へ   " + Key("右ドラッグ") + "回転   " + Key("ホイール") + "ズーム   " + Key("M") + "音   " + Key("K") + "言語   " + Key("H") + "ヘルプ",
-                Key("点击") + "缩放到行星   " + Key("F1") + "行星导览(N/B)   " + Key("F2") + "真实比例   " + Key("F9") + "去银河系展区   " + Key("F10") + "回标题   " + Key("右键拖动") + "旋转   " + Key("滚轮") + "缩放   " + Key("M") + "声音   " + Key("K") + "语言   " + Key("H") + "帮助");
-        }
     }
 }
