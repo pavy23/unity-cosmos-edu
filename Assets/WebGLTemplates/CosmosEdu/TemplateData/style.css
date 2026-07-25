@@ -12,3 +12,25 @@ html, body { width: 100%; height: 100%; padding: 0; margin: 0; overflow: hidden;
 #unity-build-title { float: right; margin-right: 10px; line-height: 38px; font-family: arial; font-size: 18px }
 #unity-fullscreen-button { cursor:pointer; float: right; width: 38px; height: 38px; background: url('fullscreen-button.png') no-repeat center }
 #unity-warning { position: absolute; left: 50%; top: 5%; transform: translate(-50%); background: white; padding: 10px; display: none }
+
+/* Portrait-on-phone overlay. The exhibit's UI is authored against a 1920-wide
+   reference; a 412-wide portrait viewport cannot show it at a readable size,
+   so we ask for landscape rather than ship a broken layout. Toggled from
+   updateRotateHint() in index.html — never shown on desktop. */
+#rotate-hint {
+  position: fixed; inset: 0; z-index: 20; display: none;
+  flex-direction: column; align-items: center; justify-content: center;
+  gap: 14px; padding: 24px; text-align: center;
+  background: #05070d; color: #e6e9f2;
+  font-family: -apple-system, "Noto Sans KR", "Malgun Gothic", sans-serif;
+}
+#rotate-hint .rotate-glyph {
+  font-size: 64px; line-height: 1; color: #f0c674;
+  animation: rotate-tip 2.4s ease-in-out infinite;
+}
+#rotate-hint .rotate-line { font-size: 17px; font-weight: 600 }
+#rotate-hint .rotate-sub { font-size: 12px; font-weight: 400; opacity: 0.62; line-height: 1.7 }
+@keyframes rotate-tip {
+  0%, 45% { transform: rotate(0deg) }
+  60%, 100% { transform: rotate(90deg) }
+}

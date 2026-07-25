@@ -19,7 +19,12 @@ namespace BlackHoleEffect
             public (System.Func<string> text, UnityEngine.Events.UnityAction act)[] items;
         }
 
-        const float LabelW = 78f, BtnW = 124f, BtnH = 33f, Gap = 6f, RowPitch = 39f;
+        // BtnH/RowPitch were 33/39. A landscape phone shows this bar at about
+        // 0.64 CSS px per authored px, which made a 33-high button 21 px tall
+        // — half the 44 px touch minimum. 40 gets it to ~26 without pushing a
+        // four-row bar past a third of a 412-tall viewport; a true 44 px
+        // target needs a different (paged) bar on phones.
+        const float LabelW = 78f, BtnW = 124f, BtnH = 40f, Gap = 6f, RowPitch = 46f;
         const float PadX = 18f, PadTop = 16f, PadBottom = 12f;
 
         public static (GameObject panel, List<(Text label, System.Func<string> text)> localized)

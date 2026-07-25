@@ -23,6 +23,12 @@
         </div>
       </div>
       <div id="unity-warning"> </div>
+      <!-- Shown only on a phone held in portrait; see updateRotateHint(). -->
+      <div id="rotate-hint">
+        <div class="rotate-glyph">⟳</div>
+        <div class="rotate-line">화면을 가로로 돌려주세요</div>
+        <div class="rotate-line rotate-sub">Please rotate your device · 横向きにしてください · 请横屏观看</div>
+      </div>
       <div id="unity-footer">
         <div id="unity-logo-title-footer"></div>
         <div id="unity-fullscreen-button"></div>
@@ -37,26 +43,54 @@
       var baseCanvasHeight = Number("{{{ HEIGHT }}}");
       var isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
-      // Keep the authored aspect ratio while fitting both dimensions of the
-      // browser. Unity may change canvas.width/height for devicePixelRatio, so
-      // the template dimensions are captured separately and remain the stable
-      // CSS sizing reference.
+      // Desktop keeps the authored aspect ratio, letterboxed into the window.
+      //
+      // Phones do NOT: letterboxing a 960x600 frame into a 412-wide viewport
+      // left the exhibit occupying about a quarter of the screen, and the UI
+      // (authored against a 1920 reference) was then unreadably small inside
+      // it. On mobile the canvas fills the viewport instead, with a floor on
+      // how tall-and-narrow it may get — past that the framing of the 3D
+      // content, which is composed for a landscape view, falls apart.
+      var MOBILE_MIN_ASPECT = 0.6;   // height <= width / 0.6
+
       function resizeUnityCanvas() {
         var footerHeight = isMobile ? 0 : 38;
         var availableWidth = Math.max(1, window.innerWidth);
         var availableHeight = Math.max(1, window.innerHeight - footerHeight);
-        var scale = Math.min(
-          availableWidth / baseCanvasWidth,
-          availableHeight / baseCanvasHeight
-        );
-        var cssWidth = Math.max(1, Math.floor(baseCanvasWidth * scale));
-        var cssHeight = Math.max(1, Math.floor(baseCanvasHeight * scale));
+        var cssWidth, cssHeight;
+
+        if (isMobile) {
+          cssWidth = availableWidth;
+          cssHeight = Math.min(availableHeight, availableWidth / MOBILE_MIN_ASPECT);
+        } else {
+          var scale = Math.min(
+            availableWidth / baseCanvasWidth,
+            availableHeight / baseCanvasHeight
+          );
+          cssWidth = baseCanvasWidth * scale;
+          cssHeight = baseCanvasHeight * scale;
+        }
+        cssWidth = Math.max(1, Math.floor(cssWidth));
+        cssHeight = Math.max(1, Math.floor(cssHeight));
 
         canvas.style.width = cssWidth + "px";
         canvas.style.height = cssHeight + "px";
         container.style.width = cssWidth + "px";
         container.style.height = (cssHeight + footerHeight) + "px";
         if (!isMobile) footer.style.width = cssWidth + "px";
+        updateRotateHint();
+      }
+
+      // Portrait on a phone cannot show this UI at a readable size: the
+      // layout is authored against a 1920-wide reference, and scaling it to
+      // fit a 412-wide viewport either shrinks the text past legibility or
+      // pushes the cards off screen. Ask for landscape instead of shipping
+      // a broken portrait layout.
+      function updateRotateHint() {
+        var hint = document.querySelector("#rotate-hint");
+        if (!hint) return;
+        var portrait = window.innerHeight > window.innerWidth * 1.1;
+        hint.style.display = (isMobile && portrait) ? "flex" : "none";
       }
 
       function unityShowBanner(msg, type) {

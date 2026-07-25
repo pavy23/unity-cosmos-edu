@@ -177,7 +177,19 @@ namespace BlackHoleEffect
             // quad would occlude every caption right when they matter most.
             canvas.planeDistance = refCam != null ? Mathf.Max(refCam.nearClipPlane * 1.5f, 0.15f) : 0.15f;
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1920f, 1080f);
+            // One knob for the whole UI: the scaler multiplies every authored
+            // size — text, buttons, panels, offsets — by the same factor, so
+            // the phone fix is a smaller reference, never per-widget font
+            // edits (those would grow the text out of its panels).
+            //
+            // 1280x720 makes everything 1.5x larger than the 1920 desktop
+            // reference. On a landscape phone (canvas ~915 CSS px wide) that
+            // puts body text near 13 CSS px and still leaves the widest card
+            // (1120 ref px) inside the viewport. Any lower and the cards
+            // overflow; any higher and the text is unreadable.
+            bool phone = Application.isMobilePlatform;
+            scaler.referenceResolution = phone ? new Vector2(1280f, 720f)
+                                               : new Vector2(1920f, 1080f);
             scaler.matchWidthOrHeight = 0.5f;
             return canvas;
         }
