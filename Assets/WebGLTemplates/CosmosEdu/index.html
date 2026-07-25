@@ -115,7 +115,12 @@
       var buildUrl = "Build";
       var loaderUrl = buildUrl + "/{{{ LOADER_FILENAME }}}";
       var config = {
-        arguments: [],
+        // Single source of truth for "is this a phone": the template decides
+        // once (it sizes the canvas on that decision) and hands the answer to
+        // Unity, which reads it from Environment.GetCommandLineArgs(). Letting
+        // Unity decide independently allowed the two to disagree — a filled
+        // viewport with a 1920 desktop UI reference, i.e. the tiny UI again.
+        arguments: isMobile ? ["-mobile"] : [],
         dataUrl: buildUrl + "/{{{ DATA_FILENAME }}}",
         frameworkUrl: buildUrl + "/{{{ FRAMEWORK_FILENAME }}}",
 #if USE_WASM

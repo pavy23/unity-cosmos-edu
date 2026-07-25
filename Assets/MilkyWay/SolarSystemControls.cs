@@ -57,6 +57,17 @@ namespace MilkyWay
 
         void OnLocChanged() { if (tour != null) tour.OnLanguageChanged(); }
 
+        /// <summary>Loc.Changed is static: without this the destroyed controller
+        /// stays rooted by the delegate across scene changes (and fires stale on
+        /// the next language switch), and the hover ring's runtime material and
+        /// texture leak with it.</summary>
+        void OnDestroy()
+        {
+            Loc.Changed -= OnLocChanged;
+            if (hoverMat != null) Destroy(hoverMat);
+            if (ringTex != null) Destroy(ringTex);
+        }
+
         // ---- toolbar entry points (click-only UI) ----------------------------
         public bool Busy => AnyPlaying;
         public bool Immersive => immersive;

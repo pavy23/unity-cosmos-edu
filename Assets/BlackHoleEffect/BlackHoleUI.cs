@@ -133,6 +133,35 @@ namespace BlackHoleEffect
             }
         }
 
+        static int isPhoneCache = -1;
+
+        /// <summary>Is this a phone-sized screen? One source of truth.
+        ///
+        /// On the web the WebGL template already made this call — it sized the
+        /// canvas on it — so we take its answer verbatim, passed in as a launch
+        /// argument. Asking Unity separately (Application.isMobilePlatform) let
+        /// the two disagree: the template would fill the viewport for a phone
+        /// while the canvas kept the 1920 desktop reference, which is exactly
+        /// the unreadably-small UI the mobile work exists to fix. Native
+        /// players have no template, so there Unity is the authority.</summary>
+        public static bool IsPhone
+        {
+            get
+            {
+                if (isPhoneCache >= 0) return isPhoneCache == 1;
+                bool phone;
+#if UNITY_WEBGL && !UNITY_EDITOR
+                phone = false;
+                foreach (var arg in System.Environment.GetCommandLineArgs())
+                    if (arg == "-mobile") { phone = true; break; }
+#else
+                phone = Application.isMobilePlatform;
+#endif
+                isPhoneCache = phone ? 1 : 0;
+                return phone;
+            }
+        }
+
         public static Canvas EnsureCanvas(Camera cam)
         {
             if (cam == null) cam = Camera.main;
@@ -187,9 +216,8 @@ namespace BlackHoleEffect
             // puts body text near 13 CSS px and still leaves the widest card
             // (1120 ref px) inside the viewport. Any lower and the cards
             // overflow; any higher and the text is unreadable.
-            bool phone = Application.isMobilePlatform;
-            scaler.referenceResolution = phone ? new Vector2(1280f, 720f)
-                                               : new Vector2(1920f, 1080f);
+            scaler.referenceResolution = IsPhone ? new Vector2(1280f, 720f)
+                                                 : new Vector2(1920f, 1080f);
             scaler.matchWidthOrHeight = 0.5f;
             return canvas;
         }

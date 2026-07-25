@@ -13,6 +13,26 @@ namespace MilkyWay
     /// </summary>
     public static class WebGLSiteBuild
     {
+        /// <summary>Refuse to build a platform that is not the active target.
+        ///
+        /// BuildPlayer will switch, but the player scripts are compiled with
+        /// the defines of whatever target was active — so building Android
+        /// straight from the Web target can bake UNITY_WEBGL branches into the
+        /// APK (this project has several, e.g. the nebula march-step cap).
+        /// Switching here instead would strand the build behind a domain
+        /// reload, so we ask the operator to switch and re-run.</summary>
+        static bool RequireActiveTarget(BuildTarget target)
+        {
+            if (EditorUserBuildSettings.activeBuildTarget == target) return true;
+            Debug.LogError(
+                $"[Build] Active target is {EditorUserBuildSettings.activeBuildTarget}, " +
+                $"not {target}. Switch in File > Build Profiles (or pass " +
+                $"-buildTarget on the command line), let scripts recompile, " +
+                $"then run this menu item again — platform #ifs are compiled " +
+                $"against the ACTIVE target, not the one passed to BuildPlayer.");
+            return false;
+        }
+
         static readonly string[] Scenes =
         {
             "Assets/Scenes/TitleScreen.unity",
@@ -25,6 +45,7 @@ namespace MilkyWay
         [MenuItem("Tools/Cosmos/Build WebGL (Site, desktop scenes)")]
         public static void Build()
         {
+            if (!RequireActiveTarget(BuildTarget.WebGL)) return;
             var options = new BuildPlayerOptions
             {
                 scenes = Scenes,
@@ -44,6 +65,7 @@ namespace MilkyWay
         [MenuItem("Tools/Cosmos/Build Android (Quest APK)")]
         public static void BuildAndroid()
         {
+            if (!RequireActiveTarget(BuildTarget.Android)) return;
             var options = new BuildPlayerOptions
             {
                 scenes = System.Array.ConvertAll(
@@ -64,6 +86,7 @@ namespace MilkyWay
         [MenuItem("Tools/Cosmos/Build Windows (full exhibit)")]
         public static void BuildWindows()
         {
+            if (!RequireActiveTarget(BuildTarget.StandaloneWindows64)) return;
             var options = new BuildPlayerOptions
             {
                 scenes = System.Array.ConvertAll(
