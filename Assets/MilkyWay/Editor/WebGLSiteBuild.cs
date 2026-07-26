@@ -24,12 +24,17 @@ namespace MilkyWay
         static bool RequireActiveTarget(BuildTarget target)
         {
             if (EditorUserBuildSettings.activeBuildTarget == target) return true;
-            Debug.LogError(
-                $"[Build] Active target is {EditorUserBuildSettings.activeBuildTarget}, " +
-                $"not {target}. Switch in File > Build Profiles (or pass " +
-                $"-buildTarget on the command line), let scripts recompile, " +
-                $"then run this menu item again — platform #ifs are compiled " +
-                $"against the ACTIVE target, not the one passed to BuildPlayer.");
+
+            // Switch, then stop. The switch queues a script recompile and a
+            // domain reload; continuing into BuildPlayer in this same call
+            // would build with the assemblies we were loaded from, which is
+            // the whole problem. Re-running the menu item after the reload
+            // takes the fast path above.
+            Debug.Log($"[Build] Switching active target " +
+                      $"{EditorUserBuildSettings.activeBuildTarget} -> {target}. " +
+                      $"Run this menu item again once scripts finish recompiling.");
+            EditorUserBuildSettings.SwitchActiveBuildTarget(
+                BuildPipeline.GetBuildTargetGroup(target), target);
             return false;
         }
 
