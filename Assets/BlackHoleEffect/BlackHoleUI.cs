@@ -125,10 +125,21 @@ namespace BlackHoleEffect
                 if (font == null)
                     font = Resources.Load<Font>("Fonts/NotoSansKR-Regular");
                 // LegacyRuntime is a dynamic font with OS fallback (Korean
-                // renders fine). CreateDynamicFontFromOSFont does not
-                // rasterize reliably in edit mode, so we avoid it.
+                // renders fine on desktop). CreateDynamicFontFromOSFont does
+                // not rasterize reliably in edit mode, so we avoid it.
+                //
+                // Say so loudly: this fallback keeps the desktop player working
+                // but silently empties every Korean, Japanese and Chinese label
+                // in a web build, and a blank label reads as a layout bug rather
+                // than a missing asset. Twice now that has cost a debugging
+                // session, so make the cause audible instead of guessable.
                 if (font == null)
+                {
+                    Debug.LogError("Resources/Fonts/NotoSansKR-Regular is missing — " +
+                                   "falling back to LegacyRuntime. CJK text will be blank " +
+                                   "on WebGL, which has no OS font fallback.");
                     font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+                }
                 return font;
             }
         }

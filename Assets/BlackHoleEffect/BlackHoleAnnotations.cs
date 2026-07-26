@@ -165,7 +165,13 @@ namespace BlackHoleEffect
         void BuildChildren()
         {
             DestroyChildren();
-            var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            // Must be the bundled Noto Sans KR, not LegacyRuntime: these labels
+            // lead with a Korean/Japanese/Chinese line, and WebGL has no OS font
+            // fallback to quietly supply those glyphs the way the desktop player
+            // does. With the builtin font the web build drew only the Latin half
+            // of each label — "Event Horizon Shadow" with the 사건의 지평선 그림자
+            // line above it simply missing.
+            var font = BlackHoleUI.UIFont;
             lineMat = new Material(Shader.Find("Sprites/Default")) { hideFlags = HideFlags.HideAndDontSave };
 
             entries = new Entry[Defs.Length];
