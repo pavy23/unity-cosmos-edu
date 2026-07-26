@@ -5,25 +5,65 @@ namespace BlackHoleEffect
 {
     /// <summary>
     /// The MR front door: the desktop title screen's language + experience
-    /// picker, hung in the room as the shared world-space frame. Three cards —
-    /// solar system / Milky Way / black hole — each loading its passthrough
-    /// exhibit, with a slowly turning galaxy miniature floating above the
+    /// picker, hung in the room as the shared world-space frame. Four cards —
+    /// solar system / Milky Way / nebulae / black hole — each loading its
+    /// passthrough exhibit, with a slowly turning galaxy miniature above the
     /// frame as the room's only decoration. Every MR scene's menu offers a
     /// "처음으로" button back here, so a visitor in a headset always has the
     /// same clean entry point a desktop visitor gets.
+    ///
+    /// Placed against the visitor's head pose on entry rather than against the
+    /// scene origin, and re-placed if it ever leaves reach (see Reposition). The
+    /// layout is authored around the centre of the frame, not off its edges,
+    /// because in a headset the vertical budget is the scarce one: the
+    /// edge-anchored version spanned 40 degrees of pitch and left the language
+    /// row 26 degrees below the eye line.
     /// </summary>
     public class MRTitleScreen : MonoBehaviour
     {
-        [Tooltip("Where the frame hangs in the room (MRWorldCanvas target).")]
+        [Tooltip("Pose used until a tracked head pose arrives — no longer where " +
+                 "the frame ends up.")]
         public Transform frameAnchor;
         [Tooltip("Decorative galaxy miniature, spun slowly about its disk axis.")]
         public Transform decor;
         public float decorSpinDegPerSec = 2.5f;
 
+        [Header("Placement, relative to the visitor's head (metres)")]
+        [Tooltip("How far ahead the frame hangs. Sets text size too: the canvas is " +
+                 "a fixed 2.6 m wide, so distance is the only thing scaling it.")]
+        public float frameDistance = 1.9f;
+        [Tooltip("Frame centre below eye level. Sustained upward gaze is the more " +
+                 "tiring direction, so the poster sits slightly low.")]
+        public float frameDrop = 0.12f;
+        [Tooltip("Arc the 1920px width wraps onto. 52 keeps the outermost card " +
+                 "inside 26 deg of yaw — no head turn to read the row.")]
+        public float arcDegrees = 52f;
+        public float decorRise = 0.78f;
+        public float decorPush = 0.35f;
+        public float decorTiltDeg = -32f;
+
+        [Header("Re-summon envelope")]
+        [Tooltip("Beyond this the frame is re-placed in front of the visitor.")]
+        public float maxDistance = 3.2f;
+        [Tooltip("Closer than this it is in their face; re-place.")]
+        public float minDistance = 0.9f;
+        [Tooltip("Off-gaze angle that counts as lost. Below this the frame stays put.")]
+        public float maxOffAxisDegrees = 75f;
+        [Tooltip("How long it must stay outside the envelope before moving — a " +
+                 "glance across the room must not drag the menu along.")]
+        public float dwellSeconds = 1.5f;
+        public float glideMetresPerSec = 2.2f;
+
         Text title, subtitle, hint;
         readonly (Text label, System.Func<string> text)[] cardTexts = new (Text, System.Func<string>)[8];
         Button[] langButtons;
         int locVersion = -1;
+
+        Camera viewer;
+        Transform placement;
+        Vector3 want;
+        bool placed, gliding;
+        float sinceStart, outsideFor, decorSpin;
 
         struct Card
         {
@@ -72,9 +112,34 @@ namespace BlackHoleEffect
             // Build (=EnsureCanvas sweep) first — the scene-hop lesson: calling
             // any widget guard before the sweep leaves it holding stale UI.
             Build();
-            // Pin the frame to the room anchor instead of the (absent) hole.
-            if (BlackHoleUI.WorldRig != null && frameAnchor != null)
-                BlackHoleUI.WorldRig.target = frameAnchor;
+
+            viewer = GetComponentInChildren<Camera>() ?? Camera.main;
+
+            // The rig aims at a transform we own, not at the scene anchor.
+            //
+            // The anchor is a fixed world point (0, 1.5, 2.0), and on a Quest the
+            // world origin is wherever the room was set up — so a visitor who
+            // starts anywhere but that exact spot, facing that exact direction,
+            // gets the front door behind them, across the room, or inside a wall.
+            // A menu has to arrive in front of whoever opened it.
+            var go = new GameObject("MR Title Placement") { hideFlags = HideFlags.DontSave };
+            placement = go.transform;
+            if (frameAnchor != null) placement.position = frameAnchor.position;
+            want = placement.position;
+
+            var rig = BlackHoleUI.WorldRig;
+            if (rig != null)
+            {
+                rig.target = placement;
+                rig.verticalDrop = 0f;      // the drop is already in the placement height
+                rig.arcDegrees = arcDegrees;
+                rig.PlaceNow();
+            }
+        }
+
+        void OnDestroy()
+        {
+            if (placement != null) Destroy(placement.gameObject);
         }
 
         void Update()
@@ -84,8 +149,120 @@ namespace BlackHoleEffect
                 locVersion = Loc.Version;
                 Refresh();
             }
-            if (decor != null)
-                decor.Rotate(0f, decorSpinDegPerSec * Time.deltaTime, 0f, Space.Self);
+            Reposition();
+            SpinDecor();
+        }
+
+        void Reposition()
+        {
+            if (viewer == null || placement == null) return;
+
+            if (!placed)
+            {
+                // A headset reports no head pose for the first frames, and the
+                // camera then sits at the rig origin. Placing against that is the
+                // same bug as the fixed anchor, so wait for tracking — but never
+                // forever: a runtime that reports nothing still has to show a menu.
+                sinceStart += Time.unscaledDeltaTime;
+                if (!HeadTracked() && sinceStart < 1.5f) return;
+                Snap(Desired());
+                placed = true;
+                return;
+            }
+
+            if (gliding)
+            {
+                placement.position = Vector3.MoveTowards(placement.position, want,
+                    glideMetresPerSec * Time.deltaTime);
+                if ((placement.position - want).sqrMagnitude < 1e-4f) gliding = false;
+                return;
+            }
+
+            // World-locked once placed: a menu that chases the head reads as a
+            // helmet HUD, not as something hanging in the room. But a pose fixed
+            // forever is how a visitor loses it two steps later, so it follows
+            // when — and only when — it has actually left reach.
+            if (Outside())
+            {
+                outsideFor += Time.deltaTime;
+                if (outsideFor >= dwellSeconds)
+                {
+                    want = Desired();
+                    gliding = true;
+                    outsideFor = 0f;
+                }
+            }
+            else outsideFor = 0f;
+        }
+
+        void Snap(Vector3 pos)
+        {
+            want = pos;
+            placement.position = pos;
+            gliding = false;
+            outsideFor = 0f;
+            if (BlackHoleUI.WorldRig != null) BlackHoleUI.WorldRig.PlaceNow();
+        }
+
+        /// <summary>Straight ahead of the visitor at eye level, less the drop.
+        /// Yaw only — pitching with the gaze would hang the poster in the floor
+        /// for anyone who happened to look down as the scene loaded.</summary>
+        Vector3 Desired()
+        {
+            var t = viewer.transform;
+            Vector3 fwd = t.forward;
+            fwd.y = 0f;
+            fwd = fwd.sqrMagnitude < 1e-4f ? Vector3.forward : fwd.normalized;
+            return t.position + fwd * frameDistance + Vector3.down * frameDrop;
+        }
+
+        bool Outside()
+        {
+            Vector3 flat = placement.position - viewer.transform.position;
+            flat.y = 0f;
+            float dist = flat.magnitude;
+            if (dist > maxDistance || dist < minDistance) return true;
+
+            Vector3 gaze = viewer.transform.forward;
+            gaze.y = 0f;
+            if (gaze.sqrMagnitude < 1e-4f || dist < 1e-2f) return false;
+            return Vector3.Angle(gaze.normalized, flat.normalized) > maxOffAxisDegrees;
+        }
+
+        static bool HeadTracked()
+        {
+            var head = UnityEngine.XR.InputDevices.GetDeviceAtXRNode(UnityEngine.XR.XRNode.Head);
+            return head.isValid
+                && head.TryGetFeatureValue(UnityEngine.XR.CommonUsages.isTracked, out bool tracked)
+                && tracked;
+        }
+
+        /// <summary>The galaxy rides above the frame wherever the frame ended up.
+        /// Composed rather than accumulated with Rotate: the yaw that keeps the
+        /// disk tipped toward the viewer is rewritten every frame, which would
+        /// otherwise throw the spin away.</summary>
+        void SpinDecor()
+        {
+            if (decor == null) return;
+            decorSpin = Mathf.Repeat(decorSpin + decorSpinDegPerSec * Time.deltaTime, 360f);
+
+            if (placement == null || viewer == null)
+            {
+                decor.localRotation = Quaternion.Euler(decorTiltDeg, 0f, 0f)
+                                    * Quaternion.Euler(0f, decorSpin, 0f);
+                return;
+            }
+
+            Vector3 away = placement.position - viewer.transform.position;
+            away.y = 0f;
+            var yaw = away.sqrMagnitude < 1e-4f
+                ? Quaternion.identity
+                : Quaternion.LookRotation(away.normalized, Vector3.up);
+
+            decor.position = placement.position + Vector3.up * decorRise
+                           + yaw * Vector3.forward * decorPush;
+            decor.rotation = yaw * Quaternion.Euler(decorTiltDeg, 0f, 0f)
+                                 * Quaternion.Euler(0f, decorSpin, 0f);
         }
 
         static void Load(int i) =>
@@ -95,24 +272,34 @@ namespace BlackHoleEffect
         {
             var canvas = BlackHoleUI.EnsureCanvas(GetComponentInChildren<Camera>() ?? Camera.main);
 
-            title = BlackHoleUI.MakeText(canvas.transform, "Title", 64, BlackHoleUI.TitleGold,
-                TextAnchor.MiddleCenter, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
-                new Vector2(0f, -96f), new Vector2(1400f, 96f), FontStyle.Bold);
+            // Everything is centre-anchored, and every y below is a distance from
+            // the middle of the frame. The desktop title hangs its rows off the top
+            // and bottom edges, which is how this screen ended up 1.35 m tall: in a
+            // headset that is 40 degrees of pitch, with the language row 26 degrees
+            // below the eye line. Anchoring to the centre makes the vertical budget
+            // something you can read off the numbers, and the whole layout now fits
+            // +11 to -18 degrees at the 1.9 m viewing distance.
+            var mid = new Vector2(0.5f, 0.5f);
 
-            subtitle = BlackHoleUI.MakeText(canvas.transform, "Subtitle", 28, BlackHoleUI.TextSecondary,
-                TextAnchor.MiddleCenter, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
-                new Vector2(0f, -204f), new Vector2(1400f, 40f));
+            title = BlackHoleUI.MakeText(canvas.transform, "Title", 56, BlackHoleUI.TitleGold,
+                TextAnchor.MiddleCenter, mid, mid,
+                new Vector2(0f, 346f), new Vector2(1400f, 72f), FontStyle.Bold);
 
-            // Four cards across the 1920 frame — still far beyond the ~3 degree
-            // floor a hand ray wants for a target.
-            const float cardW = 430f, cardH = 430f, gap = 36f;
+            subtitle = BlackHoleUI.MakeText(canvas.transform, "Subtitle", 26, BlackHoleUI.TextSecondary,
+                TextAnchor.MiddleCenter, mid, mid,
+                new Vector2(0f, 268f), new Vector2(1400f, 36f));
+
+            // Four cards in a row, 0.54 m each at 1.9 m — 16 degrees wide, far
+            // beyond the ~3 degree floor a hand ray wants for a target. Narrower
+            // than the desktop's 430 so the row lands inside the 52 degree arc.
+            const float cardW = 400f, cardH = 400f, gap = 30f;
             float x0 = -((Cards.Length - 1) * (cardW + gap)) * 0.5f;
             for (int i = 0; i < Cards.Length; i++)
             {
                 int idx = i;
                 var card = BlackHoleUI.MakePanel(canvas.transform, "Card " + Cards[i].scene,
-                    new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
-                    new Vector2(x0 + i * (cardW + gap), -10f), new Vector2(cardW, cardH));
+                    mid, mid,
+                    new Vector2(x0 + i * (cardW + gap), 0f), new Vector2(cardW, cardH));
 
                 var cardImg = card.GetComponent<Image>();
                 cardImg.raycastTarget = true;
@@ -157,34 +344,43 @@ namespace BlackHoleEffect
                 btn.colors = colors;
                 btn.onClick.AddListener(() => Load(idx));
 
-                var cardTitle = BlackHoleUI.MakeText(card, "Title", 42, BlackHoleUI.TitleGold,
+                var cardTitle = BlackHoleUI.MakeText(card, "Title", 38, BlackHoleUI.TitleGold,
                     TextAnchor.UpperCenter, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
-                    new Vector2(0f, -46f), new Vector2(cardW - 30f, 56f), FontStyle.Bold);
+                    new Vector2(0f, -40f), new Vector2(cardW - 30f, 50f), FontStyle.Bold);
                 cardTexts[i * 2] = (cardTitle, Cards[i].title);
 
-                var blurb = BlackHoleUI.MakeText(card, "Blurb", 26, BlackHoleUI.TextPrimary,
+                var blurb = BlackHoleUI.MakeText(card, "Blurb", 24, BlackHoleUI.TextPrimary,
                     TextAnchor.LowerCenter, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
-                    new Vector2(0f, 24f), new Vector2(cardW - 50f, 100f));
+                    new Vector2(0f, 20f), new Vector2(cardW - 56f, 116f));
+                // The factory leaves text unwrapped, which is right for a caption
+                // sized to its box. These are not: "Eight planets across your room"
+                // is wider than any card, and the card carries a Mask for its photo,
+                // so the overflow was being clipped mid-word at both edges rather
+                // than merely spilling. Let these two wrap instead.
+                blurb.horizontalOverflow = HorizontalWrapMode.Wrap;
                 cardTexts[i * 2 + 1] = (blurb, Cards[i].blurb);
             }
 
-            // Language row along the bottom of the frame — sized for a hand
-            // ray (>= 3 degrees), with the active choice edged in gold.
+            // Language row just under the cards — sized for a hand ray (>= 3
+            // degrees), with the active choice edged in gold. Anchored to the
+            // centre rather than the frame's bottom edge: off the edge it sat
+            // 0.81 m below the eye line, which is a 26 degree look down for the
+            // one control every visitor uses first.
             langButtons = new Button[Languages.Length];
-            const float langW = 250f, langH = 92f, langGap = 22f;
+            const float langW = 230f, langH = 84f, langGap = 20f;
             float lx = -(Languages.Length - 1) * (langW + langGap) * 0.5f;
             for (int i = 0; i < Languages.Length; i++)
             {
                 var lang = Languages[i].lang;
                 langButtons[i] = BlackHoleUI.MakeButton(canvas.transform, "Lang " + Languages[i].label,
-                    Languages[i].label, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
-                    new Vector2(lx + i * (langW + langGap), 120f), new Vector2(langW, langH),
+                    Languages[i].label, mid, mid,
+                    new Vector2(lx + i * (langW + langGap), -278f), new Vector2(langW, langH),
                     () => Loc.SetLanguage(lang));
             }
 
             hint = BlackHoleUI.MakeText(canvas.transform, "Hint", 22, BlackHoleUI.TextSecondary,
-                TextAnchor.MiddleCenter, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
-                new Vector2(0f, 52f), new Vector2(1200f, 32f));
+                TextAnchor.MiddleCenter, mid, mid,
+                new Vector2(0f, -352f), new Vector2(1200f, 30f));
 
             Refresh();
         }

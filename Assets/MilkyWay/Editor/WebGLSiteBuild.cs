@@ -64,25 +64,59 @@ namespace MilkyWay
                       $"{s.totalErrors} errors, {s.totalWarnings} warnings, {s.totalTime.TotalMinutes:F1} min");
         }
 
-        /// <summary>The Quest passthrough APK: all scenes (TitleScreen boots,
-        /// detects the HMD and hands off to MRTitle). IL2CPP/ARM64 and the
-        /// OpenXR feature set come from the project settings.</summary>
+        const string MRTitleScene = "Assets/Scenes/MRTitle.unity";
+
+        /// <summary>The Quest passthrough APK: all scenes, but booting MRTitle.
+        /// IL2CPP/ARM64 and the OpenXR feature set come from the project settings.
+        ///
+        /// It used to boot TitleScreen like every other platform and hand off to
+        /// MRTitle once it detected the headset. On device that detection read
+        /// false, and what a visitor got was the desktop picker as a flat sheet
+        /// across both eyes — no passthrough, and no hand-ray target to escape
+        /// with. A build whose only front door is the MR one cannot fail that
+        /// way, so the probe (since made robust) is no longer load bearing here.</summary>
         [MenuItem("Tools/Cosmos/Build Android (Quest APK)")]
         public static void BuildAndroid()
         {
             if (!RequireActiveTarget(BuildTarget.Android)) return;
             var options = new BuildPlayerOptions
             {
-                scenes = System.Array.ConvertAll(
-                    System.Array.FindAll(EditorBuildSettings.scenes, sc => sc.enabled), sc => sc.path),
+                scenes = QuestScenes(),
                 target = BuildTarget.Android,
                 locationPathName = "Builds/Android/CosmosEdu.apk",
                 options = BuildOptions.None,
             };
+            // Say which scene boots. It is the whole point of this method's scene
+            // handling, it is invisible in the APK, and getting it wrong shipped a
+            // headset build stuck on the desktop picker.
+            Debug.Log($"[AndroidBuild] boot scene: {options.scenes[0]}");
+
             var report = BuildPipeline.BuildPlayer(options);
             var s = report.summary;
             Debug.Log($"[AndroidBuild] {s.result} — {s.totalSize / (1024f * 1024f):F1} MB, " +
                       $"{s.totalErrors} errors, {s.totalWarnings} warnings, {s.totalTime.TotalMinutes:F1} min");
+        }
+
+        /// <summary>Every enabled scene, with MRTitle moved to index 0 so the
+        /// APK boots the passthrough picker. Errors rather than silently shipping
+        /// the desktop boot scene: a Quest build that starts anywhere else is the
+        /// bug this exists to prevent.</summary>
+        static string[] QuestScenes()
+        {
+            var enabled = System.Array.ConvertAll(
+                System.Array.FindAll(EditorBuildSettings.scenes, sc => sc.enabled), sc => sc.path);
+            int at = System.Array.IndexOf(enabled, MRTitleScene);
+            if (at < 0)
+                throw new UnityEditor.Build.BuildFailedException(
+                    MRTitleScene + " is not an enabled scene in Build Settings, so the APK " +
+                    "would boot the desktop picker — unusable in a headset. Create it with " +
+                    "Tools/Cosmos/Create MR Title Scene (Passthrough) and enable it.");
+            if (at > 0)
+            {
+                System.Array.Copy(enabled, 0, enabled, 1, at);
+                enabled[0] = MRTitleScene;
+            }
+            return enabled;
         }
 
         /// <summary>The full exhibit (all scenes, MR included — inert without

@@ -13,8 +13,9 @@
 ## 전시 구성 한눈에
 
 타이틀 화면(빌드 인덱스 0)에서 언어와 체험을 고르고 시작합니다. 어느 씬에서든 타이틀로
-돌아올 수 있습니다 (데스크톱은 툴바 버튼, MR은 메뉴 버튼). 헤드셋에서도 같은 빌드가 부팅됩니다:
-`TitleScreen`이 실행 중인 HMD를 감지하면 패스스루 선택 화면인 `MRTitle`로 자동 전환됩니다.
+돌아올 수 있습니다 (데스크톱은 툴바 버튼, MR은 메뉴 버튼). Quest APK는 패스스루 선택 화면인
+`MRTitle`로 바로 부팅합니다. 헤드셋을 연결한 PC 빌드는 `TitleScreen`에서 시작해 HMD를 감지하면
+`MRTitle`로 전환됩니다.
 
 | 전시 | 데스크톱 씬 | MR 씬 |
 |---|---|---|
@@ -159,9 +160,10 @@
 ## 빌드 방법
 
 모든 씬은 **메뉴로 생성되는 빌드 산출물**(`Tools/…/Create … Scene`)이고 *Build Settings*에 이미
-등록되어 있습니다 — `TitleScreen`(인덱스 0)이 모든 플랫폼의 부팅 씬입니다. Android와 Windows는 씬
+등록되어 있습니다 — `TitleScreen`(인덱스 0)이 데스크톱·웹의 부팅 씬입니다. Android와 Windows는 씬
 목록 전체를 담습니다: MR 씬은 헤드셋 밖에서는 비활성이고, HMD가 실행 중이면 `TitleScreen`이
-`MRTitle`로 자동 전환됩니다. WebGL 사이트 빌드만 예외로 데스크톱 5씬만 담습니다 — MR 씬을 넣으면
+`MRTitle`로 전환됩니다. Quest APK는 그 전환에 의존하지 않습니다 — `BuildAndroid`가 `MRTitle`을
+인덱스 0으로 올려서 헤드셋 빌드에는 MR 현관문만 존재합니다. WebGL 사이트 빌드만 예외로 데스크톱 5씬만 담습니다 — MR 씬을 넣으면
 XR 샘플 에셋(핸드 레코딩, 데모 텍스처, 약 14MB)이 데이터 파일로 끌려들어옵니다.
 
 *Build Profiles*보다 `Tools/Cosmos/` 메뉴를 쓰는 편이 낫습니다. 플랫폼별로 씬 목록과 출력 경로가
@@ -208,9 +210,9 @@ Android를 빌드하면 `UNITY_WEBGL` 분기가 APK에 박히고, 전환 자체�
 3. `Project Settings → XR Plug-in Management → Android`: **OpenXR** + Meta Quest 기능 그룹 활성화
    (패스스루는 Meta OpenXR 기능 필요; 각 MR 씬의 AR 카메라가 AR Foundation으로 구동).
 4. `Tools/Cosmos/Build Android (Quest APK)` 실행 후 설치: `adb install -r Builds/Android/CosmosEdu.apk`.
-5. 기기에서는 `TitleScreen` 부팅 → HMD 감지 → `MRTitle`(패스스루 선택 화면, MR 전시 4종)로
-   착지합니다. 에디터에서는 MR 씬에서 Play만 누르면 **XR Device Simulator**가 떠서 키보드/
-   마우스로 손 레이를 테스트할 수 있습니다.
+5. 기기에서는 `MRTitle`(패스스루 선택 화면, MR 전시 4종)로 바로 부팅하며, 프레임은 관람객이 서 있는
+   자리 정면에 걸립니다. 에디터에서는 MR 씬에서 Play만 누르면 **XR Device Simulator**가 떠서
+   키보드/마우스로 손 레이를 테스트할 수 있습니다.
 
 ### 헤드리스 빌드, 그리고 열려 있는 에디터로 빌드하기
 

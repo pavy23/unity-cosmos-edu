@@ -13,8 +13,9 @@ the nebulae &amp; clusters gallery, each with a desktop showcase and a Quest pas
 ## The exhibit at a glance
 
 A title screen (build index 0) lets visitors pick a language and an experience; every scene has a
-way back to it (a toolbar button on desktop, a menu button in MR). A headset boots the same build:
-`TitleScreen` detects a running HMD and hands off to `MRTitle`, the passthrough picker.
+way back to it (a toolbar button on desktop, a menu button in MR). The Quest APK boots straight into
+`MRTitle`, the passthrough picker; a PC build with a headset attached starts at `TitleScreen`, detects
+the HMD, and hands off to it.
 
 | Exhibit | Desktop scene | MR scene |
 |---|---|---|
@@ -209,9 +210,11 @@ Each in-app theory card (X) states whether its topic is computed or stylized.
 ## Building
 
 All scenes are **menu-driven build artifacts** (`Tools/…/Create … Scene`) and are already
-registered in *Build Settings* — `TitleScreen` at index 0 is the boot scene for every platform.
+registered in *Build Settings* — `TitleScreen` at index 0 is the boot scene on desktop and web.
 Android and Windows both ship the whole scene list: the MR scenes are inert outside a headset, and
-`TitleScreen` hands off to `MRTitle` automatically when an HMD is running. The WebGL site build is
+`TitleScreen` hands off to `MRTitle` when an HMD is running. The Quest APK does not rely on that
+handoff — `BuildAndroid` moves `MRTitle` to index 0, so the headset build has only the MR front
+door. The WebGL site build is
 the exception — it takes the five desktop scenes only, because the MR scenes would drag the XR
 sample assets (hand recordings, demo textures, ~14 MB) into the data file.
 
@@ -260,9 +263,9 @@ the switch itself queues a domain reload that would strand the build mid-call.
    feature group (passthrough requires the Meta OpenXR features; the AR camera in each MR scene
    drives it via AR Foundation).
 4. `Tools/Cosmos/Build Android (Quest APK)`, then install: `adb install -r Builds/Android/CosmosEdu.apk`.
-5. On device the build boots into `TitleScreen`, detects the HMD, and lands in `MRTitle` — the
-   passthrough picker with all four MR exhibits. In-editor, pressing Play in any MR scene spawns
-   the **XR Device Simulator** for keyboard/mouse hand-ray testing.
+5. On device the build boots straight into `MRTitle` — the passthrough picker with all four MR
+   exhibits, hung in front of wherever the visitor happens to be standing. In-editor, pressing Play
+   in any MR scene spawns the **XR Device Simulator** for keyboard/mouse hand-ray testing.
 
 ### Headless, and driving an editor that is already open
 

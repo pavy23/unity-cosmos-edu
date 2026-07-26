@@ -66,21 +66,82 @@ namespace BlackHoleEffect
             // MR title before any UI is built. The editor's XR simulator never
             // trips this: it simulates input devices, not a display, and the
             // scene guard removes it from non-XR scenes anyway.
-            if (HmdActive() && Application.CanStreamedLevelBeLoaded("MRTitle"))
-            {
-                UnityEngine.SceneManagement.SceneManager.LoadScene("MRTitle");
-                return;
-            }
+            //
+            // Getting this wrong is not cosmetic. On the Quest the flat picker
+            // renders as a sheet across both eyes with no hand-ray target on it,
+            // so a visitor is stranded at a title screen they cannot dismiss —
+            // which is exactly what the first device test found. The Android
+            // player therefore boots MRTitle directly (WebGLSiteBuild.BuildAndroid
+            // puts it at index 0) and never reaches this probe at all; what
+            // remains here serves a PC build with a headset attached.
+            if (XrPresent()) { HandOffToMR(); return; }
+
+            // XR may still be coming up. Build nothing while waiting: one frame
+            // of desktop UI inside a headset is the bug being fixed.
+            if (XrExpected()) { StartCoroutine(WaitForXr()); return; }
+
             Build();
         }
 
-        static bool HmdActive()
+        /// <summary>
+        /// Is this session running on a headset?
+        ///
+        /// Three signals, because each is absent at a different moment and the
+        /// original one-line probe (a running XRDisplaySubsystem) read false on
+        /// device. With "Initialize XR on Startup" set, the loader is assigned
+        /// synchronously before any scene loads, so it answers earliest; the
+        /// display subsystem only reports `running` once the runtime's session
+        /// has actually begun, which is not guaranteed by the first Start().
+        /// </summary>
+        static bool XrPresent()
         {
+            var settings = UnityEngine.XR.Management.XRGeneralSettings.Instance;
+            if (settings != null && settings.Manager != null && settings.Manager.activeLoader != null)
+                return true;
+            if (UnityEngine.XR.XRSettings.isDeviceActive) return true;
+
             var displays = new System.Collections.Generic.List<UnityEngine.XR.XRDisplaySubsystem>();
             SubsystemManager.GetSubsystems(displays);
             foreach (var d in displays)
                 if (d.running) return true;
             return false;
+        }
+
+        /// <summary>Is a headset plausible enough to be worth waiting for? Only
+        /// where every user has one — a desktop or a browser must not sit on a
+        /// blank screen while we wait for XR that is never coming.</summary>
+        static bool XrExpected() =>
+#if UNITY_ANDROID && !UNITY_EDITOR
+            true;       // this project's Android target is the Quest APK
+#else
+            false;
+#endif
+
+        System.Collections.IEnumerator WaitForXr()
+        {
+            const float deadline = 1.5f;
+            for (float t = 0f; t < deadline; t += Time.unscaledDeltaTime)
+            {
+                if (XrPresent()) { HandOffToMR(); yield break; }
+                yield return null;
+            }
+            Debug.LogWarning("[TitleScreen] No XR display came up within " + deadline +
+                             "s; falling back to the desktop picker.");
+            Build();
+        }
+
+        void HandOffToMR()
+        {
+            if (Application.CanStreamedLevelBeLoaded("MRTitle"))
+            {
+                UnityEngine.SceneManagement.SceneManager.LoadScene("MRTitle");
+                return;
+            }
+            // Better a bad front door than none, but say so loudly: the flat
+            // picker cannot be operated from inside a headset.
+            Debug.LogError("[TitleScreen] Running on XR but MRTitle is not in the build. " +
+                           "The desktop picker is not usable on an HMD.");
+            Build();
         }
 
         void Update()

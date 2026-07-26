@@ -342,14 +342,17 @@ namespace MilkyWay.Editor
             var scene = NewMRScene("MRTitle");
             var cam = BuildXRRig();
 
-            // Where the frame hangs: straight ahead of the spawn pose, a step
-            // back — a poster at the exhibit entrance, not a HUD.
+            // Fallback pose only. MRTitleScreen places the frame against the
+            // visitor's head pose on entry, because the world origin on a Quest
+            // is wherever the room was set up — a fixed anchor put the front door
+            // behind whoever did not happen to start at it, facing it.
             var anchor = new GameObject("Title Frame Anchor");
             anchor.transform.position = new Vector3(0f, 1.5f, 2.0f);
 
             // Decor: the MR galaxy miniature, floating above the frame and
             // turning slowly. Same MR materials as the galaxy exhibit, so a
-            // killed play session can never leak desktop values.
+            // killed play session can never leak desktop values. Its pose here
+            // is likewise provisional — MRTitleScreen rides it above the frame.
             var volumeMat = SaveMaterial("GalaxyVolumeMR", volumeShader);
             var starMat = SaveMaterial("GalaxyStarsMR", starShader);
             starMat.SetFloat("_NearFade", 0.08f * GalaxyScale);
