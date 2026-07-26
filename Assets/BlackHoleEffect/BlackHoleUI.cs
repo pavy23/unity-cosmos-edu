@@ -182,18 +182,21 @@ namespace BlackHoleEffect
         {
             get
             {
-                if (canvas != null)
-                {
-                    var r = ((RectTransform)canvas.transform).rect;
-                    if (r.width > 1f && r.height > 1f) return r.size;
-                }
-                // All UI is built from Start, before the canvas has had a layout
-                // pass, so the rect above is usually still zero. Reproduce the
-                // CanvasScaler's own arithmetic rather than assume the reference
-                // resolution IS the frame — it is not. The desktop web template
-                // letterboxes to the authored 1.6 aspect, not 16:9, which puts
-                // the real frame at ~1821x1138 and made every decision taken
-                // against 1920x1080 wrong by about a hundred pixels.
+                // MR hangs an authored 1920x1080 frame in the room at a fixed
+                // physical size; nothing about it is fitted to a screen.
+                if (WorldSpace) return new Vector2(1920f, 1080f);
+
+                // Reproduce the CanvasScaler's arithmetic rather than read the
+                // canvas rect. Deliberately: all UI is built from Start, and at
+                // that point the rect still reports raw pixels because the scaler
+                // has not applied its factor yet. Trusting it made the control
+                // bar lay itself out against a 735-wide frame that was really
+                // 1280 — it wrapped into seven rows and ate the screen.
+                //
+                // Not the reference resolution either. That is not the frame: the
+                // desktop web template letterboxes to the authored 1.6 aspect,
+                // not 16:9, so the real frame is ~1821x1138 and every decision
+                // taken against 1920x1080 is off by about a hundred pixels.
                 Vector2 refRes = IsPhone ? new Vector2(1280f, 720f) : new Vector2(1920f, 1080f);
                 float sw = Mathf.Max(1, Screen.width), sh = Mathf.Max(1, Screen.height);
                 // matchWidthOrHeight = 0.5 → the geometric mean of the two ratios.

@@ -114,15 +114,29 @@ namespace BlackHoleEffect
                 new Vector2(0f, -226f), new Vector2(1400f, 36f));
 
             // Four experience cards: solar system → galaxy → nebulae → hole.
-            // Widths chosen so the whole row centres inside a 1920-ref canvas.
-            const float cardW = 344f, cardH = 330f, gap = 38f;
+            //
+            // The row used to be a fixed 344x330 placed 30 px below centre. That
+            // fits a 1080-tall frame with 133 px to spare and does not fit a
+            // 720-tall one at all: the blurbs printed through the language
+            // buttons and the subtitle vanished behind the card tops. So give the
+            // fixed furniture above and below its room and let the cards have
+            // whatever is left, capped at the authored size so a desktop frame
+            // comes out where it always did.
+            var frame = BlackHoleUI.CanvasRefSize;
+            const float TopBlock = 268f;      // title + subtitle
+            const float BottomBlock = 236f;   // hint, language row (150..212), air
+            const float gap = 38f;
+            float band = Mathf.Max(120f, frame.y - TopBlock - BottomBlock);
+            float cardH = Mathf.Min(330f, band);
+            float cardW = cardH * (344f / 330f);
+            float cardY = BottomBlock + band * 0.5f - frame.y * 0.5f;
             float x0 = -((Cards.Length - 1) * (cardW + gap)) * 0.5f;
             for (int i = 0; i < Cards.Length; i++)
             {
                 int idx = i;
                 var card = BlackHoleUI.MakePanel(canvas.transform, "Card " + Cards[i].scene,
                     new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
-                    new Vector2(x0 + i * (cardW + gap), -30f), new Vector2(cardW, cardH));
+                    new Vector2(x0 + i * (cardW + gap), cardY), new Vector2(cardW, cardH));
 
                 // MakePanel leaves its Image non-raycastable (panels are usually
                 // just backdrops); the whole card is a click target here, so turn
@@ -197,6 +211,12 @@ namespace BlackHoleEffect
                     TextAnchor.LowerCenter, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
                     new Vector2(0f, 20f), new Vector2(cardW - 50f, 84f));
                 cardTexts[i * 2 + 1] = (blurb, Cards[i].blurb);
+                // Not on a phone. These labels do not wrap (every string carries
+                // its own line breaks), so on a 225-wide card the blurb spilled
+                // out past both edges — and sizing it to fit would put it near
+                // 11 CSS px on the device, below what anyone can read. The photo
+                // and the name carry the card; the blurb was always the bonus.
+                if (BlackHoleUI.IsPhone) blurb.gameObject.SetActive(false);
             }
 
             // Language row: the visit starts by picking a voice.
