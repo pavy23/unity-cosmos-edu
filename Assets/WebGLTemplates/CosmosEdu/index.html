@@ -45,13 +45,19 @@
 
       // Desktop keeps the authored aspect ratio, letterboxed into the window.
       //
-      // Phones do NOT: letterboxing a 960x600 frame into a 412-wide viewport
-      // left the exhibit occupying about a quarter of the screen, and the UI
-      // (authored against a 1920 reference) was then unreadably small inside
-      // it. On mobile the canvas fills the viewport instead, with a floor on
-      // how tall-and-narrow it may get — past that the framing of the 3D
-      // content, which is composed for a landscape view, falls apart.
-      var MOBILE_MIN_ASPECT = 0.6;   // height <= width / 0.6
+      // Phones do NOT letterbox the authored 960x600 frame: dropping that into
+      // a 412-wide viewport left the exhibit at about a quarter of the screen,
+      // with the UI (authored against a 1920 reference) unreadable inside it.
+      //
+      // But filling the viewport outright was worse. A phone in landscape is
+      // roughly 2.2:1 once the browser chrome is subtracted, and the UI is laid
+      // out for 16:9 — every scene ran out of vertical room and the title, the
+      // language row and the exhibit cards printed on top of each other.
+      //
+      // So: fill the height, and cap the width at 16:9. The scarce dimension on
+      // a landscape phone is height, so height drives the fit; the leftover
+      // width becomes side bars rather than a squashed layout.
+      var MOBILE_MAX_ASPECT = 16 / 9;
 
       function resizeUnityCanvas() {
         var footerHeight = isMobile ? 0 : 38;
@@ -60,8 +66,8 @@
         var cssWidth, cssHeight;
 
         if (isMobile) {
-          cssWidth = availableWidth;
-          cssHeight = Math.min(availableHeight, availableWidth / MOBILE_MIN_ASPECT);
+          cssHeight = availableHeight;
+          cssWidth = Math.min(availableWidth, cssHeight * MOBILE_MAX_ASPECT);
         } else {
           var scale = Math.min(
             availableWidth / baseCanvasWidth,

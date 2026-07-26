@@ -42,7 +42,12 @@ namespace BlackHoleEffect
         static readonly (Vector2 anchor, Vector2 label)[] Defs =
         {
             (new Vector2(0f, 2.6f),      new Vector2(0f, 5.2f)),
-            (new Vector2(-1.9f, -1.9f),  new Vector2(-4.4f, -4.2f)),
+            // Photon ring: the label used to sit at -4.2 Rs, which on a 16:9
+            // frame lands inside the exhibit toolbar at the bottom of the
+            // screen — the text was half-hidden behind the buttons. Pulled out
+            // sideways instead of down, so the leader runs nearly horizontal
+            // and the label clears both the toolbar and the physics panel.
+            (new Vector2(-1.9f, -1.9f),  new Vector2(-5.4f, -2.0f)),
             (new Vector2(4.0f, -0.2f),   new Vector2(6.2f, -3.6f)),
             // Doppler beaming: the approaching (bright) side is screen-RIGHT
             // (disk velocity +cross(ŷ, r̂) in the camera-facing basis), and
