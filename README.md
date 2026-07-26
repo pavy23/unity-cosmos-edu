@@ -34,8 +34,10 @@ tour ends by returning to the galaxy.
   gravitational-wave chirp audio are generated in code; the few external assets are observed
   planet/moon texture maps, DSS2 deep-sky survey photography (nebula backdrops, with
   attribution), and a bundled pan-CJK font
-- **Runs on PC (primary), Quest passthrough, and WebGL** (all shaders `target 3.5`; post-processing
-  is disabled on web — a known URP/WebGL FSR limitation)
+- **Runs on PC (primary), Quest passthrough, and WebGL — phone browsers included**: touch controls,
+  a 16:9 letterbox, a UI laid out against a 1280-wide reference so captions stay legible, and
+  adaptive resolution (all shaders `target 3.5`; post-processing is disabled on web — a known
+  URP/WebGL FSR limitation)
 
 ---
 
@@ -208,15 +210,31 @@ Each in-app theory card (X) states whether its topic is computed or stylized.
 
 All scenes are **menu-driven build artifacts** (`Tools/…/Create … Scene`) and are already
 registered in *Build Settings* — `TitleScreen` at index 0 is the boot scene for every platform.
-One scene list serves all three targets: the MR scenes are inert outside a headset, and
-`TitleScreen` hands off to `MRTitle` automatically when an HMD is running.
+Android and Windows both ship the whole scene list: the MR scenes are inert outside a headset, and
+`TitleScreen` hands off to `MRTitle` automatically when an HMD is running. The WebGL site build is
+the exception — it takes the five desktop scenes only, because the MR scenes would drag the XR
+sample assets (hand recordings, demo textures, ~14 MB) into the data file.
+
+Prefer the `Tools/Cosmos/` menu items over *Build Profiles*: they pin the scene list and the output
+path per platform.
+
+| Menu item | Method | Output |
+|---|---|---|
+| Build WebGL (Site, desktop scenes) | `MilkyWay.WebGLSiteBuild.Build` | `Builds/WebGL/` |
+| Build Android (Quest APK) | `MilkyWay.WebGLSiteBuild.BuildAndroid` | `Builds/Android/CosmosEdu.apk` |
+| Build Windows (full exhibit) | `MilkyWay.WebGLSiteBuild.BuildWindows` | `Builds/Windows/CosmosEdu.exe` |
+
+Each one **refuses to build a platform that is not already the active target** — it switches and
+asks you to re-run. Player scripts compile with the defines of whatever target is active, so
+building Android straight from the Web target would bake `UNITY_WEBGL` branches into the APK, and
+the switch itself queues a domain reload that would strand the build mid-call.
 
 ### PC (Windows)
 
 1. `File → Build Profiles` → platform **Windows**.
 2. Scripting backend: **Mono** works out of the box; switch to IL2CPP if the module is installed
    (`Project Settings → Player → Configuration`).
-3. Build to `Builds/Windows/` and run `CosmosEdu.exe`.
+3. `Tools/Cosmos/Build Windows (full exhibit)`, then run `Builds/Windows/CosmosEdu.exe`.
 
 ### WebGL
 
@@ -226,7 +244,7 @@ One scene list serves all three targets: the MR scenes are inert outside a heads
      input) and right-drag orbiting in the browser; the default template breaks both.
    - Compression **gzip** — the hosting server must send `Content-Encoding: gzip`.
    - Every shader stays `#pragma target 3.5` (SM 4.5 features silently break WebGL builds).
-3. Build to `Builds/WebGL/`, then serve locally:
+3. `Tools/Cosmos/Build WebGL (Site, desktop scenes)`, then serve locally:
    ```
    python Builds/serve_webgl.py    # http://localhost:8123 (handles Content-Encoding)
    ```
@@ -241,9 +259,39 @@ One scene list serves all three targets: the MR scenes are inert outside a heads
 3. `Project Settings → XR Plug-in Management → Android`: enable **OpenXR** with the Meta Quest
    feature group (passthrough requires the Meta OpenXR features; the AR camera in each MR scene
    drives it via AR Foundation).
-4. Build the APK and install: `adb install -r CosmosEdu.apk`.
+4. `Tools/Cosmos/Build Android (Quest APK)`, then install: `adb install -r Builds/Android/CosmosEdu.apk`.
 5. On device the build boots into `TitleScreen`, detects the HMD, and lands in `MRTitle` — the
    passthrough picker with all four MR exhibits. In-editor, pressing Play in any MR scene spawns
    the **XR Device Simulator** for keyboard/mouse hand-ray testing.
+
+### Headless, and driving an editor that is already open
+
+The same three methods run from the command line, one target per invocation:
+
+```
+Unity.exe -batchmode -quit -projectPath <repo> -buildTarget Android \
+          -executeMethod MilkyWay.WebGLSiteBuild.BuildAndroid -logFile android.log
+```
+
+`-buildTarget` makes the target active before `-executeMethod` runs, which is what satisfies the
+guard above. **Close the editor first** — two Unity instances cannot open one project, and batchmode
+aborts on the spot while the lock (`Temp/UnityLockfile`) is held. Two traps if you script this:
+
+- `Unity.exe` is a GUI-subsystem binary, so a shell that launches it with `&` or `start` returns the
+  instant it spawns rather than when the build ends (PowerShell: `Start-Process -Wait`). Fire three
+  builds that way and they collide on the project lock instead of queueing.
+- Judge a build by the `[…Build] Succeeded` line in its log, not by the artifact's timestamp. The
+  Windows player's `CosmosEdu.exe` and `UnityPlayer.dll` are copied from the editor install with
+  their original mtimes, and an incremental WebGL build leaves `WebGL.wasm.gz` untouched when the
+  IL2CPP output is unchanged — both look stale while being perfectly current.
+
+To build without closing a running editor, write the target into `Temp/cosmos-autobuild.txt`
+(`webgl`, `android`, or `windows`). `AutoBuildTrigger` reads it on the next domain reload, switches
+target if needed, and builds on the reload that follows — the request survives the first pass and is
+consumed before `BuildPlayer`, so a build that takes down the editor cannot loop on restart.
+
+Also switching targets is not free in the working tree: Unity rewrites `preloadedAssets` in
+`ProjectSettings.asset` and deletes the XR Simulation assets under `Assets/XR/`. Revert that churn
+rather than committing it.
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)

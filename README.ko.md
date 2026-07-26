@@ -31,7 +31,9 @@
 - **거의 전부 프로시저럴** — 스카이박스·은하·별 표면·사운드스케이프·중력파 처프 오디오까지 코드 생성.
   외부 에셋은 행성/달 실측 텍스처 맵, DSS2 심우주 서베이 사진(성운 배경, 출처 표기 포함),
   번들 CJK 폰트뿐
-- **PC(주 타깃) · Quest 패스스루 · WebGL** 지원 (전 셰이더 `target 3.5`; 웹은 URP/WebGL FSR 제한으로 포스트프로세싱 비활성)
+- **PC(주 타깃) · Quest 패스스루 · WebGL — 모바일 브라우저 포함**: 터치 조작, 16:9 레터박스,
+  캡션 가독성을 위한 1280 기준 UI 레이아웃, 적응형 해상도 (전 셰이더 `target 3.5`; 웹은 URP/WebGL
+  FSR 제한으로 포스트프로세싱 비활성)
 
 ---
 
@@ -157,16 +159,31 @@
 ## 빌드 방법
 
 모든 씬은 **메뉴로 생성되는 빌드 산출물**(`Tools/…/Create … Scene`)이고 *Build Settings*에 이미
-등록되어 있습니다 — `TitleScreen`(인덱스 0)이 모든 플랫폼의 부팅 씬입니다. 씬 목록 하나로 세
-타깃을 전부 커버합니다: MR 씬은 헤드셋 밖에서는 비활성이고, HMD가 실행 중이면 `TitleScreen`이
-`MRTitle`로 자동 전환됩니다.
+등록되어 있습니다 — `TitleScreen`(인덱스 0)이 모든 플랫폼의 부팅 씬입니다. Android와 Windows는 씬
+목록 전체를 담습니다: MR 씬은 헤드셋 밖에서는 비활성이고, HMD가 실행 중이면 `TitleScreen`이
+`MRTitle`로 자동 전환됩니다. WebGL 사이트 빌드만 예외로 데스크톱 5씬만 담습니다 — MR 씬을 넣으면
+XR 샘플 에셋(핸드 레코딩, 데모 텍스처, 약 14MB)이 데이터 파일로 끌려들어옵니다.
+
+*Build Profiles*보다 `Tools/Cosmos/` 메뉴를 쓰는 편이 낫습니다. 플랫폼별로 씬 목록과 출력 경로가
+고정되어 있습니다.
+
+| 메뉴 항목 | 메서드 | 출력 |
+|---|---|---|
+| Build WebGL (Site, desktop scenes) | `MilkyWay.WebGLSiteBuild.Build` | `Builds/WebGL/` |
+| Build Android (Quest APK) | `MilkyWay.WebGLSiteBuild.BuildAndroid` | `Builds/Android/CosmosEdu.apk` |
+| Build Windows (full exhibit) | `MilkyWay.WebGLSiteBuild.BuildWindows` | `Builds/Windows/CosmosEdu.exe` |
+
+세 항목 모두 **활성 타깃이 아닌 플랫폼은 빌드를 거부**하고, 타깃만 전환한 뒤 다시 실행하라고
+안내합니다. 플레이어 스크립트는 그 시점의 활성 타깃 디파인으로 컴파일되므로, Web 타깃에서 곧바로
+Android를 빌드하면 `UNITY_WEBGL` 분기가 APK에 박히고, 전환 자체가 도메인 리로드를 예약해 호출
+도중에 빌드가 끊깁니다.
 
 ### PC (Windows)
 
 1. `File → Build Profiles` → 플랫폼 **Windows**.
 2. 스크립팅 백엔드: **Mono**는 그대로 동작; IL2CPP 모듈이 설치돼 있으면 전환 가능
    (`Project Settings → Player → Configuration`).
-3. `Builds/Windows/`로 빌드 후 `CosmosEdu.exe` 실행.
+3. `Tools/Cosmos/Build Windows (full exhibit)` 실행 후 `Builds/Windows/CosmosEdu.exe` 실행.
 
 ### WebGL
 
@@ -176,7 +193,7 @@
      우클릭 드래그 궤도를 고칩니다. 기본 템플릿은 둘 다 깨집니다.
    - 압축 **gzip** — 호스팅 서버가 `Content-Encoding: gzip`을 보내야 합니다.
    - 모든 셰이더는 `#pragma target 3.5` 유지 (SM 4.5 기능은 WebGL 빌드를 조용히 망가뜨림).
-3. `Builds/WebGL/`로 빌드 후 로컬 서빙:
+3. `Tools/Cosmos/Build WebGL (Site, desktop scenes)` 실행 후 로컬 서빙:
    ```
    python Builds/serve_webgl.py    # http://localhost:8123 (Content-Encoding 처리)
    ```
@@ -190,9 +207,37 @@
 2. 스크립팅 백엔드 **IL2CPP** + 아키텍처 **ARM64** (Quest 필수 조합).
 3. `Project Settings → XR Plug-in Management → Android`: **OpenXR** + Meta Quest 기능 그룹 활성화
    (패스스루는 Meta OpenXR 기능 필요; 각 MR 씬의 AR 카메라가 AR Foundation으로 구동).
-4. APK 빌드 후 설치: `adb install -r CosmosEdu.apk`.
+4. `Tools/Cosmos/Build Android (Quest APK)` 실행 후 설치: `adb install -r Builds/Android/CosmosEdu.apk`.
 5. 기기에서는 `TitleScreen` 부팅 → HMD 감지 → `MRTitle`(패스스루 선택 화면, MR 전시 4종)로
    착지합니다. 에디터에서는 MR 씬에서 Play만 누르면 **XR Device Simulator**가 떠서 키보드/
    마우스로 손 레이를 테스트할 수 있습니다.
+
+### 헤드리스 빌드, 그리고 열려 있는 에디터로 빌드하기
+
+같은 세 메서드를 커맨드라인에서 한 번에 한 타깃씩 실행할 수 있습니다:
+
+```
+Unity.exe -batchmode -quit -projectPath <repo> -buildTarget Android \
+          -executeMethod MilkyWay.WebGLSiteBuild.BuildAndroid -logFile android.log
+```
+
+`-buildTarget`이 `-executeMethod` 실행 전에 타깃을 활성화하므로 위의 거부 조건을 통과합니다.
+**에디터를 먼저 닫아야 합니다** — 한 프로젝트를 두 Unity 인스턴스가 열 수 없어서, 락
+(`Temp/UnityLockfile`)이 잡혀 있으면 배치모드가 즉시 중단됩니다. 스크립트로 돌릴 때 함정 두 가지:
+
+- `Unity.exe`는 GUI 서브시스템 바이너리라서, 셸에서 `&`나 `start`로 띄우면 빌드 종료가 아니라 프로세스
+  생성 시점에 곧바로 반환됩니다(PowerShell은 `Start-Process -Wait`). 그대로 세 개를 띄우면 순서대로
+  대기하지 않고 프로젝트 락에서 서로 충돌합니다.
+- 성공 판정은 산출물 타임스탬프가 아니라 로그의 `[…Build] Succeeded` 줄로 하세요. Windows 플레이어의
+  `CosmosEdu.exe`와 `UnityPlayer.dll`은 에디터 설치 폴더에서 원본 mtime째로 복사되고, 증분 WebGL
+  빌드는 IL2CPP 출력이 같으면 `WebGL.wasm.gz`를 손대지 않습니다 — 둘 다 최신인데 낡아 보입니다.
+
+에디터를 닫지 않고 빌드하려면 `Temp/cosmos-autobuild.txt`에 타깃 이름(`webgl`, `android`,
+`windows`)을 써 넣으면 됩니다. `AutoBuildTrigger`가 다음 도메인 리로드에서 이를 읽어 필요하면 타깃을
+전환하고, 그 뒤 이어지는 리로드에서 빌드합니다 — 요청 파일은 1차 패스에서는 남고 `BuildPlayer`
+직전에 삭제되므로, 에디터를 죽이는 빌드가 재시작 때 반복되지 않습니다.
+
+그리고 타깃 전환은 작업 트리에 흔적을 남깁니다: Unity가 `ProjectSettings.asset`의 `preloadedAssets`를
+고쳐 쓰고 `Assets/XR/` 아래 XR Simulation 에셋을 삭제합니다. 커밋하지 말고 되돌리세요.
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
