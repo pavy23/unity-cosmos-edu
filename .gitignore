@@ -45,3 +45,12 @@ crashlytics-build.properties
 
 # Local Netlify folder
 .netlify
+
+# Written by the performance-testing package on every build. Harmless except
+# that it lands in a Resources folder, so it ships inside every player.
+/Assets/Resources/PerformanceTestRun*.json
+/Assets/Resources/PerformanceTestRun*.json.meta
+
+# Scratch folder the XR packages create next to their settings.
+/Assets/XR/Temp
+/Assets/XR/Temp.meta
