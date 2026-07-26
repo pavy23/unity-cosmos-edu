@@ -11,6 +11,11 @@ namespace BlackHoleEffect
     /// the title. Same visual language as the title cards (a masked photo with
     /// the name over it) but sized down so it never competes with the main
     /// content. Clicking a thumbnail loads that scene.
+    ///
+    /// The corner is shared with the control bar, so this asks
+    /// <see cref="BlackHoleUI.BottomClaimedAbove"/> what the bar took and stacks
+    /// above it rather than assuming the room is free — it was not, on any
+    /// screen, and on a phone it was not even close.
     /// </summary>
     [DisallowMultipleComponent]
     public class SceneNavigator : MonoBehaviour
@@ -23,6 +28,13 @@ namespace BlackHoleEffect
         }
 
         const float CardW = 150f, CardH = 88f, Gap = 10f, Margin = 22f;
+        const float HomeH = 30f, ChipH = 34f;
+
+        // How much overlap with the control bar counts as none. The bar's panel
+        // carries 18 px of horizontal padding plus a rounded corner, so a card
+        // edge intruding that far hides nothing and needs no reflow. Above it,
+        // the card starts covering buttons and the cluster stacks instead.
+        const float OverlapSlack = 40f;
 
         readonly List<(Text label, System.Func<string> text)> localized = new();
         readonly List<GameObject> parts = new();
@@ -32,12 +44,51 @@ namespace BlackHoleEffect
         bool includeHome;
         bool vertical;
 
+        // Phone: the cluster hides behind a corner chip (see Init).
+        bool collapsible, expanded, visible = true;
+        RectTransform cluster;    // the part the chip toggles
+        GameObject chip;
+        Text chipLabel;
+        float baseY;              // cluster bottom, clear of whatever claimed the corner
+        float clusterTop;         // top of the header line, set while building
+
         public void Init(Dest[] destinations, bool home = true, bool verticalLayout = false)
         {
             dests = destinations;
             includeHome = home;
-            vertical = verticalLayout;
-            if (vertical) BuildVertical(); else Build();
+
+            // A phone cannot afford a permanent switcher. The horizontal cluster
+            // is 470 reference px beside an 896-wide control bar inside a
+            // 1280-wide canvas: they overlapped by 300 px, which is exactly the
+            // UI-printed-over-UI the phone screenshots showed. So collapse to a
+            // corner chip that expands over a scrim, and stack the cards
+            // vertically while open so they cover as little of the exhibit as
+            // a phone screen allows.
+            collapsible = BlackHoleUI.IsPhone;
+            vertical = verticalLayout || collapsible;
+
+            float right = BlackHoleUI.CanvasRefSize.x - Margin;
+            float clusterW = vertical ? CardW : dests.Length * CardW + (dests.Length - 1) * Gap;
+
+            if (collapsible)
+            {
+                float chipY = Margin + BlackHoleUI.BottomClaimedAbove(
+                    right - CardW + OverlapSlack, right);
+                baseY = chipY + ChipH + 8f;
+                BuildCluster();
+                BuildChip(chipY);
+            }
+            else
+            {
+                baseY = Margin + BlackHoleUI.BottomClaimedAbove(
+                    right - clusterW + OverlapSlack, right);
+                BuildCluster();
+                // Claim the whole thing, header included, so anything that lays
+                // out along the bottom after us — including the world-space
+                // annotation labels — stays clear of it.
+                BlackHoleUI.ClaimBottom(new Rect(
+                    right - clusterW, baseY, clusterW, clusterTop - baseY));
+            }
         }
 
         void Update()
@@ -50,22 +101,107 @@ namespace BlackHoleEffect
 
         public void SetVisible(bool on)
         {
+            visible = on;
+            Apply();
+        }
+
+        void Apply()
+        {
+            if (collapsible)
+            {
+                if (chip != null) chip.SetActive(visible);
+                if (cluster != null) cluster.gameObject.SetActive(visible && expanded);
+                return;
+            }
             parts.RemoveAll(p => p == null);
-            foreach (var p in parts) p.SetActive(on);
+            foreach (var p in parts) p.SetActive(visible);
+        }
+
+        // × (U+00D7), not ✕ (U+2715): the Dingbats cross is absent from the
+        // bundled Noto Sans KR and draws as an empty button on WebGL.
+        string ChipText() => expanded
+            ? Loc.T("×  닫기", "×  Close", "×  閉じる", "×  关闭")
+            : Loc.T("전시 바꾸기  ▴", "Exhibits  ▴", "展示を選ぶ  ▴", "切换展区  ▴");
+
+        void Toggle()
+        {
+            expanded = !expanded;
+            Apply();
+            if (chipLabel != null) chipLabel.text = ChipText();
+        }
+
+        /// <summary>The chip never hides with the sheet — it is the only way
+        /// back once collapsed.</summary>
+        void BuildChip(float chipY)
+        {
+            var canvas = BlackHoleUI.EnsureCanvas(Camera.main);
+            var anchor = new Vector2(1f, 0f);
+            var btn = BlackHoleUI.MakeButton(canvas.transform, "Nav Chip", "",
+                anchor, anchor, new Vector2(-Margin, chipY), new Vector2(CardW, ChipH), Toggle);
+            chip = btn.gameObject;
+            chipLabel = btn.GetComponentInChildren<Text>();
+            if (chipLabel != null)
+            {
+                chipLabel.fontSize = 14;
+                localized.Add((chipLabel, ChipText));
+                chipLabel.text = ChipText();
+            }
+            BlackHoleUI.ClaimBottom(new Rect(
+                BlackHoleUI.CanvasRefSize.x - Margin - CardW, chipY, CardW, ChipH));
+            Apply();
+        }
+
+        /// <summary>Full-canvas container so the cards keep their canvas-relative
+        /// anchors while still toggling as one unit.</summary>
+        void BuildCluster()
+        {
+            var canvas = BlackHoleUI.EnsureCanvas(Camera.main);
+            var go = new GameObject("Nav Cluster", typeof(RectTransform))
+                { hideFlags = HideFlags.DontSave };
+            cluster = (RectTransform)go.transform;
+            cluster.SetParent(canvas.transform, false);
+            cluster.anchorMin = Vector2.zero;
+            cluster.anchorMax = Vector2.one;
+            cluster.offsetMin = cluster.offsetMax = Vector2.zero;
+
+            if (vertical) BuildVertical(); else Build();
+
+            // Open sheets dim what is behind them, so the cards read as a layer
+            // rather than as more buttons, and a tap aimed at a card that misses
+            // closes the sheet instead of hitting the control bar underneath.
+            if (collapsible) BuildScrim();
+        }
+
+        void BuildScrim()
+        {
+            var go = new GameObject("Nav Scrim", typeof(RectTransform), typeof(Image), typeof(Button))
+                { hideFlags = HideFlags.DontSave };
+            var rt = (RectTransform)go.transform;
+            rt.SetParent(cluster, false);
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.one;
+            rt.offsetMin = rt.offsetMax = Vector2.zero;
+            var img = go.GetComponent<Image>();
+            img.color = new Color(0.01f, 0.015f, 0.03f, 0.72f);
+            img.raycastTarget = true;
+            var btn = go.GetComponent<Button>();
+            btn.targetGraphic = img;
+            btn.transition = Selectable.Transition.None;
+            btn.onClick.AddListener(Toggle);
+            rt.SetSiblingIndex(0);
         }
 
         void Build()
         {
-            var canvas = BlackHoleUI.EnsureCanvas(Camera.main);
             var anchor = new Vector2(1f, 0f);
 
             // Home chip along the bottom of the cluster.
-            float y = Margin;
+            float y = baseY;
             if (includeHome)
             {
                 float chipW = dests.Length * CardW + (dests.Length - 1) * Gap;
-                var home = BlackHoleUI.MakeButton(canvas.transform, "Nav Home", "",
-                    anchor, anchor, new Vector2(-Margin, y), new Vector2(chipW, 30f),
+                var home = BlackHoleUI.MakeButton(cluster, "Nav Home", "",
+                    anchor, anchor, new Vector2(-Margin, y), new Vector2(chipW, HomeH),
                     () => UnityEngine.SceneManagement.SceneManager.LoadScene("TitleScreen"));
                 var hlabel = home.GetComponentInChildren<Text>();
                 if (hlabel != null)
@@ -76,44 +212,35 @@ namespace BlackHoleEffect
                     hlabel.text = ht();
                 }
                 parts.Add(home.gameObject);
-                y += 30f + 8f;
+                y += HomeH + 8f;
             }
 
             // Thumbnails, right-aligned, laid left→right.
             float x = -Margin;
             for (int i = dests.Length - 1; i >= 0; i--)
             {
-                BuildCard(canvas.transform, dests[i], anchor, new Vector2(x, y));
+                BuildCard(cluster, dests[i], anchor, new Vector2(x, y));
                 x -= CardW + Gap;
             }
 
-            // Small header above the cluster.
-            var header = BlackHoleUI.MakeText(canvas.transform, "Nav Header", 13,
-                BlackHoleUI.TextSecondary, TextAnchor.LowerRight, anchor, anchor,
-                new Vector2(-Margin, y + CardH + 4f), new Vector2(360f, 20f));
-            System.Func<string> headerT = () => Loc.T("다른 전시로", "Other exhibits", "他の展示へ", "其他展区");
-            header.text = headerT();
-            localized.Add((header, headerT));
-            parts.Add(header.gameObject);
+            BuildHeader(anchor, y + CardH + 4f);
         }
 
         // Vertical variant: a column of thumbnails stacked in the BOTTOM-RIGHT
         // corner, growing upward. Used where a wide bottom panel (the nebula
         // gallery's fact card) would collide with a horizontal row but the corner
-        // itself is free.
+        // itself is free — and on phones, where a row never fits.
         void BuildVertical()
         {
-            var canvas = BlackHoleUI.EnsureCanvas(Camera.main);
             var anchor = new Vector2(1f, 0f);   // bottom-right
             int n = dests.Length;
-            const float HomeH = 30f;
 
-            // Home chip flush in the corner.
-            float cardsBottom = Margin;
+            // Home chip at the foot of the column.
+            float cardsBottom = baseY;
             if (includeHome)
             {
-                var home = BlackHoleUI.MakeButton(canvas.transform, "Nav Home", "",
-                    anchor, anchor, new Vector2(-Margin, Margin), new Vector2(CardW, HomeH),
+                var home = BlackHoleUI.MakeButton(cluster, "Nav Home", "",
+                    anchor, anchor, new Vector2(-Margin, baseY), new Vector2(CardW, HomeH),
                     () => UnityEngine.SceneManagement.SceneManager.LoadScene("TitleScreen"));
                 var hlabel = home.GetComponentInChildren<Text>();
                 if (hlabel != null)
@@ -124,25 +251,29 @@ namespace BlackHoleEffect
                     hlabel.text = ht();
                 }
                 parts.Add(home.gameObject);
-                cardsBottom = Margin + HomeH + Gap;
+                cardsBottom = baseY + HomeH + Gap;
             }
 
             // Thumbnails stacked upward; dests[0] on top.
             for (int i = 0; i < n; i++)
             {
                 float yBottom = cardsBottom + (n - 1 - i) * (CardH + Gap);
-                BuildCard(canvas.transform, dests[i], anchor, new Vector2(-Margin, yBottom));
+                BuildCard(cluster, dests[i], anchor, new Vector2(-Margin, yBottom));
             }
 
-            // Header above the top card.
-            float topY = cardsBottom + (n - 1) * (CardH + Gap) + CardH + 4f;
-            var header = BlackHoleUI.MakeText(canvas.transform, "Nav Header", 13,
+            BuildHeader(anchor, cardsBottom + (n - 1) * (CardH + Gap) + CardH + 4f);
+        }
+
+        void BuildHeader(Vector2 anchor, float y)
+        {
+            var header = BlackHoleUI.MakeText(cluster, "Nav Header", 13,
                 BlackHoleUI.TextSecondary, TextAnchor.LowerRight, anchor, anchor,
-                new Vector2(-Margin, topY), new Vector2(360f, 20f));
+                new Vector2(-Margin, y), new Vector2(360f, 20f));
             System.Func<string> headerT = () => Loc.T("다른 전시로", "Other exhibits", "他の展示へ", "其他展区");
             header.text = headerT();
             localized.Add((header, headerT));
             parts.Add(header.gameObject);
+            clusterTop = y + 20f;
         }
 
         void BuildCard(Transform canvas, Dest dest, Vector2 anchor, Vector2 pos)

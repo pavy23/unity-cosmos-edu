@@ -269,6 +269,15 @@ namespace BlackHoleEffect
                 Vector3 anchor = center + (right * e.anchorDirRs.x + up * e.anchorDirRs.y) * rs + bias;
                 Vector3 labelPos = center + (right * labelDir.x + up * labelDir.y) * rs + bias;
 
+                // Keep clear of the UI. These labels are world-space meshes and
+                // cannot see the screen-space canvas, so the ISCO label — which
+                // hangs below the disk — printed straight through the control
+                // bar's buttons. Ask what the bottom of the screen is spoken
+                // for and slide up out of it. Skipped in MR, where the canvas
+                // hangs in the room and "the bottom of the screen" means nothing.
+                if (!BlackHoleUI.WorldSpace)
+                    labelPos = LiftAboveUI(cam, labelPos, up);
+
                 // Scale text/lines with the hole so labels work from room-scale
                 // MR (Rs ~ 0.1 m) up to the showcase scene (Rs = 0.5 m).
                 e.label.characterSize = 0.09f * rs;
@@ -278,6 +287,33 @@ namespace BlackHoleEffect
                 e.line.SetPosition(0, anchor);
                 e.line.SetPosition(1, labelPos + (anchor - labelPos).normalized * rs * 1.1f);
             }
+        }
+
+        /// <summary>Slide a label up until it clears whatever the UI has claimed
+        /// along the bottom of the screen at that label's horizontal position.
+        /// The leader line follows, so the label stays attached to its feature —
+        /// it just approaches from a shallower angle.</summary>
+        static Vector3 LiftAboveUI(Camera cam, Vector3 pos, Vector3 up)
+        {
+            Vector3 vp = cam.WorldToViewportPoint(pos);
+            if (vp.z <= 0f) return pos;   // behind the camera
+
+            Vector2 refSize = BlackHoleUI.CanvasRefSize;
+            // Half of a wide label, roughly. Without it a label whose centre
+            // clears the bar but whose tail does not still reads as overlapping.
+            const float HalfLabelRef = 150f, AirRef = 20f;
+            float xRef = vp.x * refSize.x;
+            float claimed = BlackHoleUI.BottomClaimedAbove(xRef - HalfLabelRef, xRef + HalfLabelRef);
+            if (claimed <= 0f) return pos;
+
+            float minY = (claimed + AirRef) / refSize.y;
+            if (vp.y >= minY) return pos;
+
+            // Viewport fraction -> metres at this label's depth.
+            float worldPerVp = cam.orthographic
+                ? 2f * cam.orthographicSize
+                : 2f * vp.z * Mathf.Tan(cam.fieldOfView * 0.5f * Mathf.Deg2Rad);
+            return pos + up * ((minY - vp.y) * worldPerVp);
         }
     }
 }

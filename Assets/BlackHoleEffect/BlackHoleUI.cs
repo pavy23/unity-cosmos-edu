@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.XR.Interaction.Toolkit.UI;
@@ -74,6 +75,7 @@ namespace BlackHoleEffect
         {
             worldSpaceOverride = null;
             canvas = null;
+            bottomClaims.Clear();
 #if UNITY_EDITOR
             UnityEditor.EditorApplication.playModeStateChanged -= OnPlayModeChanged;
             UnityEditor.EditorApplication.playModeStateChanged += OnPlayModeChanged;
@@ -144,6 +146,62 @@ namespace BlackHoleEffect
             }
         }
 
+        // ---- Bottom-edge layout budget -------------------------------------
+        //
+        // The bottom of the screen is contested: the control bar sits centred on
+        // it, the exhibit switcher claims the right corner, and the annotation
+        // labels hang wherever the physics puts them. All three were authored in
+        // absolute reference pixels against different anchors, so whether they
+        // collided was arithmetic nobody was checking — and the arithmetic was
+        // always tight. On the 1920 desktop frame the bar's right edge cleared
+        // the switcher's left edge by 20 px; on the phone reference (1280, so the
+        // text stays legible) the same two want 1390 px and overlap by 300.
+        //
+        // Fix the class of bug, not the instance: whoever takes bottom space says
+        // so, and whoever lays out afterwards asks instead of assuming. Rects are
+        // in canvas reference units, origin bottom-left. Cleared with the canvas,
+        // since every claimant is parented to it.
+        static readonly List<Rect> bottomClaims = new List<Rect>();
+
+        public static void ClaimBottom(Rect refRect) => bottomClaims.Add(refRect);
+
+        /// <summary>Top edge (reference px above the bottom) of everything
+        /// claimed that overlaps the horizontal span [xMin, xMax], or 0 when
+        /// that span is free. Ask before placing anything along the bottom.</summary>
+        public static float BottomClaimedAbove(float xMin, float xMax)
+        {
+            float top = 0f;
+            foreach (var r in bottomClaims)
+                if (r.xMax > xMin && r.xMin < xMax && r.yMax > top) top = r.yMax;
+            return top;
+        }
+
+        /// <summary>Logical canvas size in reference units — the frame everything
+        /// is laid out inside, and the only honest basis for a layout decision.</summary>
+        public static Vector2 CanvasRefSize
+        {
+            get
+            {
+                if (canvas != null)
+                {
+                    var r = ((RectTransform)canvas.transform).rect;
+                    if (r.width > 1f && r.height > 1f) return r.size;
+                }
+                // All UI is built from Start, before the canvas has had a layout
+                // pass, so the rect above is usually still zero. Reproduce the
+                // CanvasScaler's own arithmetic rather than assume the reference
+                // resolution IS the frame — it is not. The desktop web template
+                // letterboxes to the authored 1.6 aspect, not 16:9, which puts
+                // the real frame at ~1821x1138 and made every decision taken
+                // against 1920x1080 wrong by about a hundred pixels.
+                Vector2 refRes = IsPhone ? new Vector2(1280f, 720f) : new Vector2(1920f, 1080f);
+                float sw = Mathf.Max(1, Screen.width), sh = Mathf.Max(1, Screen.height);
+                // matchWidthOrHeight = 0.5 → the geometric mean of the two ratios.
+                float scale = Mathf.Sqrt((sw / refRes.x) * (sh / refRes.y));
+                return scale > 0.0001f ? new Vector2(sw / scale, sh / scale) : refRes;
+            }
+        }
+
         static int isPhoneCache = -1;
 
         /// <summary>Is this a phone-sized screen? One source of truth.
@@ -185,6 +243,9 @@ namespace BlackHoleEffect
                 if (c != null && c.name == "BlackHole UI Canvas" && c != canvas)
                     SweepStaleCanvas(c.gameObject);
             if (canvas != null) SweepStaleCanvas(canvas.gameObject);
+
+            // Fresh canvas, so every bottom-edge claim died with the old one.
+            bottomClaims.Clear();
 
             var go = new GameObject("BlackHole UI Canvas") { hideFlags = HideFlags.DontSave };
             canvas = go.AddComponent<Canvas>();
