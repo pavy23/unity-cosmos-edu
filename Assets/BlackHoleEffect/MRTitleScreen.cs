@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -56,6 +57,7 @@ namespace BlackHoleEffect
 
         Text title, subtitle, hint;
         readonly (Text label, System.Func<string> text)[] cardTexts = new (Text, System.Func<string>)[8];
+        readonly RectTransform[] cardRects = new RectTransform[4];
         Button[] langButtons;
         int locVersion = -1;
 
@@ -64,6 +66,12 @@ namespace BlackHoleEffect
         Vector3 want;
         bool placed, gliding;
         float sinceStart, outsideFor, decorSpin;
+
+        DocentOrb orb;
+        float idleSince;
+        bool hinted;
+
+        public bool FramePlaced => placed;
 
         struct Card
         {
@@ -135,6 +143,42 @@ namespace BlackHoleEffect
                 rig.arcDegrees = arcDegrees;
                 rig.PlaceNow();
             }
+
+            // The docent (see DocentOrb): greets once the frame has landed.
+            // Clips mr_hub_* have no TTS pass yet — the orb chips them until
+            // the audio exists, so the flow is testable today.
+            orb = DocentOrb.Spawn(viewer, BlackHoleUI.TitleGold);
+            StartCoroutine(Greeting());
+        }
+
+        IEnumerator Greeting()
+        {
+            while (!placed) yield return null;
+            yield return new WaitForSeconds(0.8f);
+
+            yield return orb.Say("mr_hub_0", Loc.T(
+                "어서 오세요, 우주 전시관입니다",
+                "Welcome to the Cosmos Exhibit",
+                "ようこそ、宇宙展示館へ",
+                "欢迎来到宇宙展览馆"));
+
+            if (cardRects[1] != null) orb.PointAt(cardRects[1]);
+            yield return orb.Say("mr_hub_1", Loc.T(
+                "손 레이로 카드를 골라 보세요",
+                "Point at a card with your hand ray",
+                "ハンドレイでカードを選んでください",
+                "用手部射线选择一张卡片"));
+
+            if (langButtons != null && langButtons.Length > 1 && langButtons[1] != null)
+                orb.PointAt(langButtons[1].transform);
+            yield return orb.Say("mr_hub_2", Loc.T(
+                "언어는 아래에서 바꿀 수 있어요",
+                "You can switch languages below",
+                "言語は下で切り替えられます",
+                "可以在下方切换语言"));
+
+            orb.PointAt(null);
+            idleSince = Time.time;
         }
 
         void OnDestroy()
@@ -151,6 +195,19 @@ namespace BlackHoleEffect
             }
             Reposition();
             SpinDecor();
+
+            // Discoverability net: a walk-up visitor who has not chosen within
+            // 45 s gets a concrete suggestion instead of a silent room.
+            if (orb != null && !hinted && idleSince > 0f && Time.time - idleSince > 45f)
+            {
+                hinted = true;
+                if (cardRects[0] != null) orb.PointAt(cardRects[0]);
+                orb.Say("mr_hub_3", Loc.T(
+                    "태양계부터 볼까요?",
+                    "Shall we start with the Solar System?",
+                    "太陽系から見てみましょうか?",
+                    "从太阳系开始看看吧?"));
+            }
         }
 
         void Reposition()
@@ -300,6 +357,7 @@ namespace BlackHoleEffect
                 var card = BlackHoleUI.MakePanel(canvas.transform, "Card " + Cards[i].scene,
                     mid, mid,
                     new Vector2(x0 + i * (cardW + gap), 0f), new Vector2(cardW, cardH));
+                cardRects[i] = card;
 
                 var cardImg = card.GetComponent<Image>();
                 cardImg.raycastTarget = true;
