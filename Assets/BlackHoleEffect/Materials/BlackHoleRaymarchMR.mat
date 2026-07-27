@@ -30,14 +30,14 @@ Material:
     - _DemoStarBrightness: 6
     - _DemoStarOn: 0
     - _DemoStarSize: 0.0007
-    - _DiskBrightness: 8
-    - _DiskContrast: 0.45
-    - _DiskDetail: 5.5
+    - _DiskBrightness: 9.5
+    - _DiskContrast: 0.3
+    - _DiskDetail: 4.2
     - _DiskInner: 2.9
     - _DiskOuter: 8.6
-    - _DiskTemp: 0.86
-    - _Doppler: 0.6
-    - _FlowSpeed: 1
+    - _DiskTemp: 1.06
+    - _Doppler: 0.72
+    - _FlowSpeed: 1.6
     - _HazeStrength: 0.18
     - _Hole1Mass: 0.6
     - _Hole2Mass: 0.48000002
@@ -49,8 +49,8 @@ Material:
     - _ViewExtent: 15
     - _ZWrite: 0
     m_Colors:
-    - _DemoStarDir: {r: 0, g: 0, b: 1, a: 0}
-    - _DiskTint: {r: 1, g: 0.58, b: 0.38, a: 1}
+    - _DemoStarDir: {r: 0.41494495, g: -0.40172324, b: 0.81635714, a: 0}
+    - _DiskTint: {r: 1, g: 1, b: 1, a: 1}
     - _Hole1Pos: {r: 1.7482442, g: -0, b: -0.568543, a: 0}
     - _Hole2Pos: {r: -2.185305, g: 0, b: 0.71067876, a: 0}
   m_BuildTextureStacks: []
