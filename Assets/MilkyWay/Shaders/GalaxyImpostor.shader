@@ -47,6 +47,7 @@ Shader "MilkyWay/GalaxyImpostor"
                                                 // y = exposure boost: photographs stretch
                                                 // cluster halos; energy conservation would
                                                 // bury the enlarged sprites without it
+                UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
             struct Varyings
@@ -54,11 +55,14 @@ Shader "MilkyWay/GalaxyImpostor"
                 float4 positionHCS : SV_POSITION;
                 float4 color : TEXCOORD0;       // tint * energy
                 float3 uvRand : TEXCOORD1;      // xy = sprite uv, z = random
+                UNITY_VERTEX_OUTPUT_STEREO
             };
 
             Varyings vert(Attributes v)
             {
                 Varyings o;
+                UNITY_SETUP_INSTANCE_ID(v);
+                UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
                 float3 centerWS = TransformObjectToWorld(v.positionOS.xyz);
                 float dist = length(_WorldSpaceCameraPos - centerWS);
 
@@ -95,6 +99,8 @@ Shader "MilkyWay/GalaxyImpostor"
 
             half4 frag(Varyings i) : SV_Target
             {
+                UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
+
                 float rand = i.uvRand.z;
                 float r1 = frac(rand * 7.31);
                 float r2 = frac(rand * 13.77);

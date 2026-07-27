@@ -47,7 +47,10 @@ namespace MilkyWay
 
         public void StartTour()
         {
-            if (Running || stage == null || stage.TruthRunning) return;
+            if (Running || stage == null) return;
+            // A planet is up close and the orrery is faded out — there is
+            // nothing for the tour's highlight ring to point at.
+            if (controls != null && controls.Focus != null && controls.Focus.Focused) return;
             Running = true;
             step = 0;
             labelsWereOn = stage.LabelsVisible;
@@ -110,9 +113,11 @@ namespace MilkyWay
             if (step < SolarSystemTour.StopCount - 1) { step++; ApplyStep(); }
             else
             {
-                // "…let's return to where we can see the galaxy."
+                // Ends where it started, in this room. The last line used to
+                // hand the visitor straight to the galaxy exhibit, but with the
+                // title screen as the only hub an exhibit that walks off to
+                // another exhibit on its own is a scene change nobody asked for.
                 StopTour();
-                UnityEngine.SceneManagement.SceneManager.LoadScene("MilkyWayMR");
             }
         }
 
@@ -123,21 +128,31 @@ namespace MilkyWay
             if (card != null) return;
             var canvas = BlackHoleUI.EnsureCanvas(Camera.main);
 
+            // Bottom-pivoted so MR's taller reading text grows the card upward,
+            // away from the nav buttons on its bottom edge.
             card = BlackHoleUI.MakePanel(canvas.transform, "Solar MR Tour Card",
-                new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 26f), new Vector2(1100f, 274f));
+                new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 26f),
+                new Vector2(1100f, BlackHoleUI.ReadingY(274f)));
 
-            cardTitle = BlackHoleUI.MakeText(card, "Title", 28, BlackHoleUI.TitleGold, TextAnchor.UpperLeft,
-                new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(28f, -18f), new Vector2(860f, 36f), FontStyle.Bold);
+            cardTitle = BlackHoleUI.MakeText(card, "Title", BlackHoleUI.ReadingSize(28), BlackHoleUI.TitleGold,
+                TextAnchor.UpperLeft, new Vector2(0f, 1f), new Vector2(0f, 1f),
+                new Vector2(28f, BlackHoleUI.ReadingY(-18f)), new Vector2(860f, BlackHoleUI.ReadingY(36f)),
+                FontStyle.Bold);
 
-            cardBody = BlackHoleUI.MakeText(card, "Body", 21, BlackHoleUI.TextPrimary, TextAnchor.UpperLeft,
-                new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(28f, -60f), new Vector2(1044f, 132f));
+            cardBody = BlackHoleUI.MakeText(card, "Body", BlackHoleUI.ReadingSize(21), BlackHoleUI.TextPrimary,
+                TextAnchor.UpperLeft, new Vector2(0f, 1f), new Vector2(0f, 1f),
+                new Vector2(28f, BlackHoleUI.ReadingY(-60f)), new Vector2(1044f, BlackHoleUI.ReadingY(132f)));
             cardBody.horizontalOverflow = HorizontalWrapMode.Wrap;
 
-            cardFacts = BlackHoleUI.MakeText(card, "Facts", 17, BlackHoleUI.TitleGold, TextAnchor.LowerLeft,
-                new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(28f, 40f), new Vector2(1044f, 26f));
+            // Facts and footer stack up from the bottom edge, so their offsets
+            // grow together with the text or the two rows close on each other.
+            cardFacts = BlackHoleUI.MakeText(card, "Facts", BlackHoleUI.ReadingSize(17), BlackHoleUI.TitleGold,
+                TextAnchor.LowerLeft, new Vector2(0f, 0f), new Vector2(0f, 0f),
+                new Vector2(28f, BlackHoleUI.ReadingY(40f)), new Vector2(1044f, BlackHoleUI.ReadingY(26f)));
 
-            cardFooter = BlackHoleUI.MakeText(card, "Footer", 16, BlackHoleUI.TextSecondary, TextAnchor.LowerLeft,
-                new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(28f, 12f), new Vector2(300f, 24f));
+            cardFooter = BlackHoleUI.MakeText(card, "Footer", BlackHoleUI.ReadingSize(16), BlackHoleUI.TextSecondary,
+                TextAnchor.LowerLeft, new Vector2(0f, 0f), new Vector2(0f, 0f),
+                new Vector2(28f, 12f), new Vector2(300f, BlackHoleUI.ReadingY(24f)));
 
             prevLabel = BlackHoleUI.MakeButton(card, "Tour Prev", "",
                 new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(-320f, 14f), new Vector2(140f, 84f), Prev)

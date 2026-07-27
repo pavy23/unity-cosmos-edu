@@ -87,11 +87,12 @@ namespace BlackHoleEffect
         /// Is this session running on a headset?
         ///
         /// Three signals, because each is absent at a different moment and the
-        /// original one-line probe (a running XRDisplaySubsystem) read false on
-        /// device. With "Initialize XR on Startup" set, the loader is assigned
-        /// synchronously before any scene loads, so it answers earliest; the
-        /// display subsystem only reports `running` once the runtime's session
-        /// has actually begun, which is not guaranteed by the first Start().
+        /// original one-line probe (<see cref="XRRuntime.HmdActive"/>, a running
+        /// XRDisplaySubsystem) read false on device. With "Initialize XR on
+        /// Startup" set, the loader is assigned synchronously before any scene
+        /// loads, so it answers earliest; the display subsystem only reports
+        /// `running` once the runtime's session has actually begun, which is not
+        /// guaranteed by the first Start().
         /// </summary>
         static bool XrPresent()
         {
@@ -99,12 +100,7 @@ namespace BlackHoleEffect
             if (settings != null && settings.Manager != null && settings.Manager.activeLoader != null)
                 return true;
             if (UnityEngine.XR.XRSettings.isDeviceActive) return true;
-
-            var displays = new System.Collections.Generic.List<UnityEngine.XR.XRDisplaySubsystem>();
-            SubsystemManager.GetSubsystems(displays);
-            foreach (var d in displays)
-                if (d.running) return true;
-            return false;
+            return XRRuntime.HmdActive();
         }
 
         /// <summary>Is a headset plausible enough to be worth waiting for? Only

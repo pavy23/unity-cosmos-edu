@@ -41,12 +41,24 @@ Shader "MilkyWay/PhotoBackdrop"
                 float _Exposure, _VignetteInner, _VignetteOuter;
             CBUFFER_END
 
-            struct Attributes { float4 positionOS : POSITION; float2 uv : TEXCOORD0; };
-            struct Varyings   { float4 positionCS : SV_POSITION; float2 uv : TEXCOORD0; };
+            struct Attributes
+            {
+                float4 positionOS : POSITION;
+                float2 uv : TEXCOORD0;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+            };
+            struct Varyings
+            {
+                float4 positionCS : SV_POSITION;
+                float2 uv : TEXCOORD0;
+                UNITY_VERTEX_OUTPUT_STEREO
+            };
 
             Varyings vert(Attributes v)
             {
                 Varyings o;
+                UNITY_SETUP_INSTANCE_ID(v);
+                UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
                 o.positionCS = TransformObjectToHClip(v.positionOS.xyz);
                 o.uv = v.uv * _MainTex_ST.xy + _MainTex_ST.zw;
                 return o;
@@ -54,6 +66,8 @@ Shader "MilkyWay/PhotoBackdrop"
 
             half4 frag(Varyings i) : SV_Target
             {
+                UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
+
                 half3 c = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, i.uv).rgb;
                 c *= _Exposure * _Tint.rgb;
                 float d = length(i.uv - 0.5) * 2.0;

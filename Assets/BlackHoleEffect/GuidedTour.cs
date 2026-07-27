@@ -36,6 +36,30 @@ namespace BlackHoleEffect
             public string hint, hintEn, hintJa, hintZh;
             public int focus;                 // annotation index to highlight, -1 = all
             public System.Action<GuidedTour> enter;
+
+            /// <summary>Null = always shown. Otherwise the step is skipped when
+            /// the demo it narrates is not in this scene — MR drops the Einstein
+            /// ring (nothing to lens against a passthrough room), and a step
+            /// that talks for twenty seconds over an empty room is worse than
+            /// no step at all.</summary>
+            public System.Func<GuidedTour, bool> available;
+        }
+
+        bool Available(int i)
+        {
+            var a = Steps[i].available;
+            return a == null || a(this);
+        }
+
+        /// <summary>Next/previous index that is actually present in this scene,
+        /// or -1. Step indices are never renumbered: NarrationLines and the
+        /// tour_N clips are addressed by index, so skipping must leave the
+        /// numbering alone.</summary>
+        int StepFrom(int start, int dir)
+        {
+            for (int i = start; i >= 0 && i < Steps.Length; i += dir)
+                if (Available(i)) return i;
+            return -1;
         }
 
         // The narration clips (Resources/Narration/tour_N and Narration/en/
@@ -130,7 +154,8 @@ namespace BlackHoleEffect
                 titleJa = "6. アインシュタインリング", titleZh = "6. 爱因斯坦环",
                 hint = "별이 정확히 정렬되는 순간을 보세요", hintEn = "Watch the moment of exact alignment",
                 hintJa = "星がぴたりと整列する瞬間に注目", hintZh = "留意恒星正好对齐的瞬间",
-                enter = t => { if (t.einsteinDemo != null) { t.einsteinDemo.active = true; t.einsteinDemo.autoSweep = true; } } },
+                available = t => t.einsteinDemo != null,
+                enter = t => { t.einsteinDemo.active = true; t.einsteinDemo.autoSweep = true; } },
             new Step { focus = -1,
                 title = "7. 빛의 궤적", titleEn = "7. Light Trajectories",
                 titleJa = "7. 光の軌跡", titleZh = "7. 光的轨迹",
@@ -174,8 +199,19 @@ namespace BlackHoleEffect
             if (comparison != null) { comparison.show = prevComparisonShow; comparison.Refresh(); }
         }
 
-        public void Next() { if (Running && step < Steps.Length - 1) { step++; ApplyStep(); } }
-        public void Prev() { if (Running && step > 0) { step--; ApplyStep(); } }
+        public void Next()
+        {
+            if (!Running) return;
+            int i = StepFrom(step + 1, +1);
+            if (i >= 0) { step = i; ApplyStep(); }
+        }
+
+        public void Prev()
+        {
+            if (!Running) return;
+            int i = StepFrom(step - 1, -1);
+            if (i >= 0) { step = i; ApplyStep(); }
+        }
 
         void ApplyStep()
         {
@@ -204,11 +240,21 @@ namespace BlackHoleEffect
             cardBody.text = body + (string.IsNullOrEmpty(hint)
                 ? "" : "\n<color=#9AA3B5>(" + hint + ")</color>");
 
+            // Count what this scene actually offers, not the authored length —
+            // "7 / 11" in a build where four of the eleven are skipped reads as
+            // a tour that lost its place.
+            int total = 0, position = 0;
+            for (int i = 0; i < Steps.Length; i++)
+            {
+                if (!Available(i)) continue;
+                total++;
+                if (i <= step) position = total;
+            }
             cardFooter.text = Loc.T("◀ ▶ 이동    × 종료",
                                     "◀ ▶ Step    × End",
                                     "◀ ▶ 移動    × 終了",
                                     "◀ ▶ 切换    × 结束")
-                            + "                                  " + (step + 1) + " / " + Steps.Length;
+                            + "                                  " + position + " / " + total;
         }
 
         /// <summary>Re-applies the current step after a language toggle so the
@@ -233,19 +279,26 @@ namespace BlackHoleEffect
             var canvas = BlackHoleUI.EnsureCanvas(GetComponent<Camera>());
 
             // Tall enough for the full narration transcript (up to 4 wrapped
-            // lines) plus the hint line and footer.
+            // lines) plus the hint line and footer. The card grows upward in MR
+            // with the text inside it — its pivot is the bottom edge, so the
+            // extra height never reaches down into the button rows.
             card = BlackHoleUI.MakePanel(canvas.transform, "Tour Card",
-                new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 96f), new Vector2(920f, 218f));
+                new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 96f),
+                new Vector2(920f, BlackHoleUI.ReadingY(218f)));
 
-            cardTitle = BlackHoleUI.MakeText(card, "Title", 26, BlackHoleUI.TitleGold, TextAnchor.UpperLeft,
-                new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(28f, -18f), new Vector2(860f, 34f), FontStyle.Bold);
+            cardTitle = BlackHoleUI.MakeText(card, "Title", BlackHoleUI.ReadingSize(26), BlackHoleUI.TitleGold,
+                TextAnchor.UpperLeft, new Vector2(0f, 1f), new Vector2(0f, 1f),
+                new Vector2(28f, BlackHoleUI.ReadingY(-18f)), new Vector2(860f, BlackHoleUI.ReadingY(34f)),
+                FontStyle.Bold);
 
-            cardBody = BlackHoleUI.MakeText(card, "Body", 20, BlackHoleUI.TextPrimary, TextAnchor.UpperLeft,
-                new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(28f, -58f), new Vector2(860f, 118f));
+            cardBody = BlackHoleUI.MakeText(card, "Body", BlackHoleUI.ReadingSize(20), BlackHoleUI.TextPrimary,
+                TextAnchor.UpperLeft, new Vector2(0f, 1f), new Vector2(0f, 1f),
+                new Vector2(28f, BlackHoleUI.ReadingY(-58f)), new Vector2(860f, BlackHoleUI.ReadingY(118f)));
             cardBody.horizontalOverflow = HorizontalWrapMode.Wrap;
 
-            cardFooter = BlackHoleUI.MakeText(card, "Footer", 15, BlackHoleUI.TextSecondary, TextAnchor.LowerLeft,
-                new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(28f, 12f), new Vector2(860f, 22f));
+            cardFooter = BlackHoleUI.MakeText(card, "Footer", BlackHoleUI.ReadingSize(15), BlackHoleUI.TextSecondary,
+                TextAnchor.LowerLeft, new Vector2(0f, 0f), new Vector2(0f, 0f),
+                new Vector2(28f, 12f), new Vector2(860f, BlackHoleUI.ReadingY(22f)));
 
             BlackHoleUI.MakeTourNav(card, Prev, Next, StopTour);
         }

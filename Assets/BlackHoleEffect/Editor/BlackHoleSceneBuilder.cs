@@ -328,57 +328,23 @@ namespace BlackHoleEffect.Editor
             var transformer = hole.AddComponent<XRGeneralGrabTransformer>();
             transformer.allowTwoHandedScaling = true;
 
-            // --- Feed the beast: throwable star-balls on a floating shelf --------
-            // Real little stars (StarSurface: limb darkening + convection
-            // granulation), one per spectral type. Corona pass is disabled in
-            // MR: its additive blend saturates the alpha channel the
-            // passthrough compositor reads, which would punch black halos
-            // into the room view.
-            var flare = hole.AddComponent<MatterFlare>();
-            var starShader = Shader.Find("BlackHole/StarSurface");
-            var starBallMats = new Material[3];
-            var starColors = new[]
-            {
-                new Color(2.6f, 2.2f, 1.4f),  // G-type: sun-like yellow-white
-                new Color(2.6f, 1.4f, 0.55f), // K-type: orange
-                new Color(2.2f, 0.75f, 0.35f) // M-type: red dwarf
-            };
-            for (int i = 0; i < 3; i++)
-            {
-                starBallMats[i] = SaveMaterial("ThrowableStar" + (char)('A' + i), starShader);
-                starBallMats[i].SetColor("_StarColor", starColors[i]);
-                starBallMats[i].SetFloat("_Granulation", 0.5f);
-                starBallMats[i].SetFloat("_GranScale", 9f - i * 1.5f); // cooler = chunkier cells
-                starBallMats[i].SetFloat("_SpotStrength", 0.2f + 0.12f * i);
-                starBallMats[i].SetFloat("_RimBoost", 0.4f);
-                starBallMats[i].SetFloat("_CoronaBoost", 0f);
-            }
-            for (int i = 0; i < 3; i++)
-            {
-                var ball = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-                ball.name = "Star Ball " + (i + 1);
-                // Within arm's reach (~0.6 m). At the old 0.85 m they measured
-                // 1.25 m from the eye — grabbable only by ray, which makes
-                // "pick up a star and throw it in" a pointing exercise.
-                ball.transform.position = new Vector3(-0.2f + 0.2f * i, 1.05f, 0.42f);
-                ball.transform.localScale = Vector3.one * 0.06f;
-                ball.GetComponent<MeshRenderer>().sharedMaterial = starBallMats[i];
-                var ballRb = ball.AddComponent<Rigidbody>();
-                ballRb.useGravity = false;
-                ballRb.linearDamping = 0f;
-                var ballGrab = ball.AddComponent<XRGrabInteractable>();
-                ballGrab.movementType = XRBaseInteractable.MovementType.VelocityTracking;
-                ballGrab.throwOnDetach = true;
-                var matter = ball.AddComponent<FallingMatter>();
-                matter.hole = hole.transform;
-                matter.flare = flare;
-            }
+            // No throwable star-balls in front of the viewer. Three spheres on a
+            // shelf at 0.42 m were the first thing in the room and the last thing
+            // that read as astronomy — at 6 cm they look like billiard balls
+            // parked between the visitor and the exhibit they came for, and the
+            // hole is one arm-length behind them.
 
             // --- Educational layer -----------------------------------------------
             // Same components as the desktop showcase. Their UI needs no MR port:
             // BlackHoleUI hangs the shared canvas in the room when it sees an XR
             // rig, so the panels frame the real hole instead of the screen.
-            var einstein = hole.AddComponent<EinsteinRingDemo>();
+            //
+            // No EinsteinRingDemo here, and no GravitationalLensDemo: both stage
+            // a bright point source BEHIND the hole and ask the viewer to read
+            // the split images against it. Against passthrough there is no
+            // "behind" — the background is the visitor's living room, so the
+            // lensed images land on a bookshelf and the effect cannot be seen.
+            // Desktop keeps both, where the starfield backdrop makes them work.
             var spaghetti = hole.AddComponent<SpaghettificationDemo>();
             spaghetti.blackHole = hole.transform;
             var jets = hole.AddComponent<RelativisticJets>();
@@ -400,7 +366,6 @@ namespace BlackHoleEffect.Editor
             var tour = cam.gameObject.AddComponent<GuidedTour>();
             tour.annotations = annotations;
             tour.panel = panel;
-            tour.einsteinDemo = einstein;
             tour.launcher = launcher;
             tour.spaghetti = spaghetti;
             tour.jets = jets;
@@ -429,7 +394,6 @@ namespace BlackHoleEffect.Editor
             controls.panel = panel;
             controls.annotations = annotations;
             controls.launcher = launcher;
-            controls.einsteinDemo = einstein;
             controls.comparison = comparison;
             controls.spaghetti = spaghetti;
             controls.jets = jets;
@@ -453,17 +417,11 @@ namespace BlackHoleEffect.Editor
             space.starfield = AssetDatabase.LoadAssetAtPath<Material>(Root + "/Materials/StarfieldSkybox.mat");
             space.passthroughMRMode = 1f;
 
-            // --- Palm-summoned miniature ------------------------------------------
-            var palmMat = SaveMaterial("BlackHoleRaymarchPalm", holeShader);
-            palmMat.SetFloat("_MRMode", 1f);
-            palmMat.SetFloat("_ZWrite", 0f);
-            palmMat.renderQueue = 2901;
-            palmMat.SetFloat("_Steps", 64f);
-            palmMat.SetFloat("_ViewExtent", 12f);
-            var palmGO = new GameObject("Palm Summon");
-            var palm = palmGO.AddComponent<PalmMiniBlackHole>();
-            palm.holeMaterial = palmMat;
-            palm.xrOrigin = Object.FindFirstObjectByType<Unity.XR.CoreUtils.XROrigin>();
+            // No palm-summoned miniature. A second raymarched hole in the hand
+            // doubled the per-eye march cost of the one scene that was already
+            // the Quest budget's ceiling, and it competed with the exhibit: the
+            // room-scale hole IS the thing to look at, and a copy riding the
+            // visitor's palm asked them to look away from it.
 
             EditorSceneManager.SaveScene(scene, Root + "/Scenes/BlackHoleMR.unity");
             Selection.activeGameObject = hole;

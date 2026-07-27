@@ -21,7 +21,16 @@ namespace MilkyWay
 
         Mesh mesh;
 
-        void OnEnable() => Build();
+        // Baked once and kept. The MR exhibit shows one specimen at a time by
+        // toggling the others inactive, so an OnEnable/OnDisable pair that
+        // rebuilt and threw away the mesh re-baked 9,000 stars — 36,000 verts
+        // across five arrays, on the main thread — every time the visitor
+        // pressed next past this one. On a headset that stall is not a hitch,
+        // it is a dropped frame the compositor has to cover for.
+        void OnEnable()
+        {
+            if (mesh == null) Build();
+        }
 
         void Build()
         {
@@ -111,7 +120,10 @@ namespace MilkyWay
             return mix[mix.Length - 1].col;
         }
 
-        void OnDisable()
+        // Not OnDisable: being hidden is not being finished with. The mesh is
+        // HideAndDontSave, so nothing else will collect it — this is the only
+        // place it goes.
+        void OnDestroy()
         {
             if (mesh != null) { DestroyImmediate(mesh); mesh = null; }
         }

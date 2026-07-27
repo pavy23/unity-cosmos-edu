@@ -8,10 +8,13 @@ namespace BlackHoleEffect
     /// The MR front door: the desktop title screen's language + experience
     /// picker, hung in the room as the shared world-space frame. Four cards —
     /// solar system / Milky Way / nebulae / black hole — each loading its
-    /// passthrough exhibit, with a slowly turning galaxy miniature above the
-    /// frame as the room's only decoration. Every MR scene's menu offers a
-    /// "처음으로" button back here, so a visitor in a headset always has the
-    /// same clean entry point a desktop visitor gets.
+    /// passthrough exhibit. Every MR scene's menu offers a "처음으로" button
+    /// back here, so a visitor in a headset always has the same clean entry
+    /// point a desktop visitor gets.
+    ///
+    /// The frame is the whole scene: the room stays the visitor's own. A
+    /// decorative galaxy miniature used to turn above it and was cut — it sold
+    /// a thinner version of an exhibit standing one card away.
     ///
     /// Placed against the visitor's head pose on entry rather than against the
     /// scene origin, and re-placed if it ever leaves reach (see Reposition). The
@@ -25,9 +28,6 @@ namespace BlackHoleEffect
         [Tooltip("Pose used until a tracked head pose arrives — no longer where " +
                  "the frame ends up.")]
         public Transform frameAnchor;
-        [Tooltip("Decorative galaxy miniature, spun slowly about its disk axis.")]
-        public Transform decor;
-        public float decorSpinDegPerSec = 2.5f;
 
         [Header("Placement, relative to the visitor's head (metres)")]
         [Tooltip("How far ahead the frame hangs. Sets text size too: the canvas is " +
@@ -39,9 +39,6 @@ namespace BlackHoleEffect
         [Tooltip("Arc the 1920px width wraps onto. 52 keeps the outermost card " +
                  "inside 26 deg of yaw — no head turn to read the row.")]
         public float arcDegrees = 52f;
-        public float decorRise = 0.78f;
-        public float decorPush = 0.35f;
-        public float decorTiltDeg = -32f;
 
         [Header("Re-summon envelope")]
         [Tooltip("Beyond this the frame is re-placed in front of the visitor.")]
@@ -65,7 +62,7 @@ namespace BlackHoleEffect
         Transform placement;
         Vector3 want;
         bool placed, gliding;
-        float sinceStart, outsideFor, decorSpin;
+        float sinceStart, outsideFor;
 
         DocentOrb orb;
         float idleSince;
@@ -194,7 +191,6 @@ namespace BlackHoleEffect
                 Refresh();
             }
             Reposition();
-            SpinDecor();
 
             // Discoverability net: a walk-up visitor who has not chosen within
             // 45 s gets a concrete suggestion instead of a silent room.
@@ -292,34 +288,6 @@ namespace BlackHoleEffect
             return head.isValid
                 && head.TryGetFeatureValue(UnityEngine.XR.CommonUsages.isTracked, out bool tracked)
                 && tracked;
-        }
-
-        /// <summary>The galaxy rides above the frame wherever the frame ended up.
-        /// Composed rather than accumulated with Rotate: the yaw that keeps the
-        /// disk tipped toward the viewer is rewritten every frame, which would
-        /// otherwise throw the spin away.</summary>
-        void SpinDecor()
-        {
-            if (decor == null) return;
-            decorSpin = Mathf.Repeat(decorSpin + decorSpinDegPerSec * Time.deltaTime, 360f);
-
-            if (placement == null || viewer == null)
-            {
-                decor.localRotation = Quaternion.Euler(decorTiltDeg, 0f, 0f)
-                                    * Quaternion.Euler(0f, decorSpin, 0f);
-                return;
-            }
-
-            Vector3 away = placement.position - viewer.transform.position;
-            away.y = 0f;
-            var yaw = away.sqrMagnitude < 1e-4f
-                ? Quaternion.identity
-                : Quaternion.LookRotation(away.normalized, Vector3.up);
-
-            decor.position = placement.position + Vector3.up * decorRise
-                           + yaw * Vector3.forward * decorPush;
-            decor.rotation = yaw * Quaternion.Euler(decorTiltDeg, 0f, 0f)
-                                 * Quaternion.Euler(0f, decorSpin, 0f);
         }
 
         static void Load(int i) =>

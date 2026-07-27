@@ -337,9 +337,9 @@ namespace BlackHoleEffect
             // Always-available language selector in the top-right corner.
             if (Application.isPlaying) LanguageSelect.CreateWidget();
 
-            // (The XR Interaction Simulator is swept scene-wide by
-            // XRSimulatorSceneGuard — any scene without an XROrigin loses it.
-            // No per-scene guard needed here.)
+            // (Whether the XR Interaction Simulator exists at all is decided by
+            // XRSimulatorSceneGuard — a scene without an XROrigin never gets
+            // one. No per-scene guard needed here.)
         }
 
         /// <summary>Gentle bloom so the HDR disk (and GW rings) actually glow.
@@ -500,7 +500,11 @@ namespace BlackHoleEffect
                       + "Snapshots/" + System.IO.Path.GetFileName(file));
         }
 
-        void ShowToast(string message)
+        /// <summary>The one-line confirmation strip under the title. Public for
+        /// the MR menu, whose buttons need the same acknowledgement the keyboard
+        /// shortcuts get — a toggle that changes nothing on screen until a later
+        /// gesture is indistinguishable from a dead button otherwise.</summary>
+        public void ShowToast(string message)
         {
             if (toast == null)
             {

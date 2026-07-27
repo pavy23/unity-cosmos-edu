@@ -6,10 +6,14 @@ using BlackHoleEffect; // Loc, BlackHoleUI, LanguageSelect
 namespace MilkyWay
 {
     /// <summary>
-    /// Hand-ray menu for the MR nebula exhibit: prev/next specimen, the "Life
-    /// of a Star" tour, reset pose, and hops to the other MR exhibits. The
-    /// museum label (name / facts / blurb from NebulaLibrary) rides the top of
-    /// the world frame and follows the shown specimen and the language.
+    /// Hand-ray menu and museum label for the MR nebula vitrine.
+    ///
+    /// The label — name / facts / blurb from NebulaLibrary — rides the top-left
+    /// of the world frame and follows whichever specimen the case is showing,
+    /// in whichever language. The row underneath is the two verbs the exhibit
+    /// actually has: step through the specimens, or start "별의 일생" and let
+    /// the tour drive. What is deliberately NOT here is 원위치 — the case is
+    /// not grabbable (see NebulaMRStage), so there is nothing to put back.
     /// </summary>
     public class NebulaMRControls : MonoBehaviour
     {
@@ -67,6 +71,9 @@ namespace MilkyWay
         {
             var canvas = BlackHoleUI.EnsureCanvas(GetComponentInChildren<Camera>() ?? Camera.main);
 
+            // Prev/next are inert while the tour runs: the tour owns which
+            // specimen is up, and its own card carries 이전/다음 for stepping
+            // the story instead.
             var actions = new (System.Func<string> text, UnityEngine.Events.UnityAction act)[]
             {
                 (() => Loc.T("별의 일생 투어", "Life of a star", "星の一生ツアー", "恒星一生导览"),
@@ -75,41 +82,40 @@ namespace MilkyWay
                     () => { if (stage != null && (tour == null || !tour.Running)) stage.Prev(); }),
                 (() => Loc.T("다음 천체 ▶", "Next ▶", "次の天体 ▶", "下一个 ▶"),
                     () => { if (stage != null && (tour == null || !tour.Running)) stage.Next(); }),
-                (() => Loc.T("원위치", "Reset", "元に戻す", "复位"),
-                    () => { if (stage != null) stage.ResetPose(); }),
             };
 
-            var scenes = new (System.Func<string> text, UnityEngine.Events.UnityAction act)[]
+            var exit = new (System.Func<string> text, UnityEngine.Events.UnityAction act)[]
             {
-                (() => Loc.T("블랙홀 전시", "Black hole", "ブラックホール展示", "黑洞展区"),
-                    () => LoadScene("BlackHoleMR")),
-                (() => Loc.T("은하 전시", "Milky Way", "銀河展示", "银河展区"),
-                    () => LoadScene("MilkyWayMR")),
-                (() => Loc.T("태양계 전시", "Solar system", "太陽系展示", "太阳系展区"),
-                    () => LoadScene("SolarSystemMR")),
                 (() => Loc.T("처음으로", "Title", "最初へ", "回标题"),
                     () => LoadScene("MRTitle")),
             };
 
             BuildRow(canvas.transform, "Nebula MR Menu", actions, 26f + RowPitch);
-            BuildRow(canvas.transform, "Nebula MR Scenes", scenes, 26f);
+            BuildRow(canvas.transform, "Nebula MR Exit", exit, 26f);
 
             // The museum label: name / facts / blurb in the top-left corner
             // column (the language widget owns top-centre in MR, and the
             // cylinder brings the corner to a comfortable head turn anyway).
+            // Top-pivoted, so MR's taller reading text grows the card downward
+            // into the empty left column rather than up off the frame.
             factCard = BlackHoleUI.MakePanel(canvas.transform, "Nebula MR Fact Card",
-                new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(40f, -30f), new Vector2(640f, 264f));
+                new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(40f, -30f),
+                new Vector2(640f, BlackHoleUI.ReadingY(264f)));
             menuRows.Add(factCard.gameObject);
 
-            factName = BlackHoleUI.MakeText(factCard, "Name", 30, BlackHoleUI.TitleGold, TextAnchor.UpperLeft,
-                new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(26f, -18f), new Vector2(588f, 40f), FontStyle.Bold);
+            factName = BlackHoleUI.MakeText(factCard, "Name", BlackHoleUI.ReadingSize(30), BlackHoleUI.TitleGold,
+                TextAnchor.UpperLeft, new Vector2(0f, 1f), new Vector2(0f, 1f),
+                new Vector2(26f, BlackHoleUI.ReadingY(-18f)), new Vector2(588f, BlackHoleUI.ReadingY(40f)),
+                FontStyle.Bold);
 
-            factLine = BlackHoleUI.MakeText(factCard, "Facts", 18, BlackHoleUI.Accent, TextAnchor.UpperLeft,
-                new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(26f, -62f), new Vector2(588f, 52f));
+            factLine = BlackHoleUI.MakeText(factCard, "Facts", BlackHoleUI.ReadingSize(18), BlackHoleUI.Accent,
+                TextAnchor.UpperLeft, new Vector2(0f, 1f), new Vector2(0f, 1f),
+                new Vector2(26f, BlackHoleUI.ReadingY(-62f)), new Vector2(588f, BlackHoleUI.ReadingY(52f)));
             factLine.horizontalOverflow = HorizontalWrapMode.Wrap;
 
-            factBlurb = BlackHoleUI.MakeText(factCard, "Blurb", 20, BlackHoleUI.TextPrimary, TextAnchor.UpperLeft,
-                new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(26f, -118f), new Vector2(588f, 132f));
+            factBlurb = BlackHoleUI.MakeText(factCard, "Blurb", BlackHoleUI.ReadingSize(20), BlackHoleUI.TextPrimary,
+                TextAnchor.UpperLeft, new Vector2(0f, 1f), new Vector2(0f, 1f),
+                new Vector2(26f, BlackHoleUI.ReadingY(-118f)), new Vector2(588f, BlackHoleUI.ReadingY(132f)));
             factBlurb.horizontalOverflow = HorizontalWrapMode.Wrap;
 
             RefreshFactCard();

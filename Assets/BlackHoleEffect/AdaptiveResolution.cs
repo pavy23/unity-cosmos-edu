@@ -23,6 +23,13 @@ namespace BlackHoleEffect
     ///
     /// Web and mobile only — a desktop player has the headroom, and changing
     /// the pipeline asset in the editor would dirty a shared asset.
+    ///
+    /// Explicitly NOT the headset. Quest is an Android device, so the mobile
+    /// test below says yes there too, and everything about this controller is
+    /// wrong for an HMD: the 30 fps floor is far under the 72 Hz a headset must
+    /// hold, and a render scale that steps up and down under the viewer is
+    /// exactly the kind of instability that makes people take the thing off.
+    /// A headset that cannot keep up needs a fixed budget, not a moving one.
     /// </summary>
     public class AdaptiveResolution : MonoBehaviour
     {
@@ -49,7 +56,7 @@ namespace BlackHoleEffect
 #if UNITY_WEBGL && !UNITY_EDITOR
             bool wanted = true;
 #else
-            bool wanted = Application.isMobilePlatform;
+            bool wanted = Application.isMobilePlatform && !XRRuntime.HmdActive();
 #endif
             if (!wanted) return;
             var go = new GameObject("Adaptive Resolution");
@@ -79,7 +86,17 @@ namespace BlackHoleEffect
         {
             if (urp == null) return;
             aliveFor += Time.unscaledDeltaTime;
-            if (aliveFor < Warmup) return;
+            if (aliveFor < Warmup)
+            {
+                // The install check runs after the first scene loads, by which
+                // point XR Management has normally started its display. Should
+                // a headset ever come up later than that, we would already be
+                // installed and would never look again — so keep asking for the
+                // length of the warmup, then stop paying for the question.
+                // OnDestroy restores the render scale.
+                if (XRRuntime.HmdActive()) Destroy(gameObject);
+                return;
+            }
 
             // Exponential smoothing: a single long frame (scene load, shader
             // compile, GC) must not move the resolution.

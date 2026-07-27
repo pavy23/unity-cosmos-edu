@@ -59,51 +59,58 @@ namespace BlackHoleEffect
             menuRows.Clear(); // a DontSave menu outlives play mode; never stack sessions
             var canvas = BlackHoleUI.EnsureCanvas(GetComponentInChildren<Camera>() ?? Camera.main);
 
-            // Three rows along the bottom of the frame, grouped the way the
-            // desktop help bar groups its key legend: experiences / the hole
-            // itself / phenomena. A row must stay inside the 1920-wide frame —
-            // nine buttons would run 2096 and hang off both edges.
-            var experiences = new (System.Func<string> text, UnityEngine.Events.UnityAction act)[]
+            // Two content rows plus the way out. Every row is also an arc the
+            // visitor has to sweep their head across — MRWorldCanvas bends the
+            // layout at true arc length, so a button added here costs real
+            // degrees of neck. Six is the widest row that still lands inside
+            // the 70 deg comfort budget at the 1.6 m viewing distance.
+            //
+            // What is deliberately NOT here, and why (desktop keeps all of it):
+            //   낙하 체험    — drives the camera into the hole. Forced translation
+            //                 with a stationary head is the textbook VR-sickness
+            //                 trigger, and in a passthrough room it is worse: the
+            //                 real floor stays put while the view moves.
+            //   블랙홀 병합  — swaps the room for a starfield (MRSpaceWindow), so
+            //                 an MR exhibit silently becomes a VR one mid-session.
+            //   질량        — CycleMass grows the horizon until the viewer is
+            //                 inside it. There is no safe upper cycle in a
+            //                 room-scale exhibit; the hole is one arm away.
+            //   광도곡선/수식 — a fine-lined 2D plot and a formula sheet, authored
+            //                 at desktop density. At MR text sizes they are not
+            //                 readable, and the panels eat the view while open.
+            var exhibit = new (System.Func<string> text, UnityEngine.Events.UnityAction act)[]
             {
                 (() => Loc.T("가이드 투어", "Guided tour", "ガイドツアー", "导览"), ToggleTour),
                 (() => Loc.T("블랙홀 탄생", "Birth", "ブラックホール誕生", "黑洞诞生"), BeginIntro),
-                (() => Loc.T("낙하 체험", "Fall in", "落下体験", "坠入体验"), BeginFallIn),
-                (() => Loc.T("블랙홀 병합", "Merger", "ブラックホール合体", "黑洞合并"), BeginMerger),
-            };
-
-            var blackHole = new (System.Func<string> text, UnityEngine.Events.UnityAction act)[]
-            {
                 (() => Loc.T("원반 색상", "Disk colors", "円盤の色", "吸积盘颜色"), () => controls.CycleColor()),
-                (() => Loc.T("질량", "Mass", "質量", "质量"), () => controls.CycleMass()),
                 (() => Loc.T("스핀", "Spin", "スピン", "自旋"), CycleSpin),
                 (() => Loc.T("관측사진", "EHT photo", "観測写真", "观测照片"), () => controls.CycleComparison()),
                 (() => Loc.T("설명 난이도", "Level", "難易度", "难度"), () => controls.CycleDifficulty()),
             };
 
+            //   아인슈타인 링/렌즈 — both need a bright source BEHIND the hole for
+            //                 the split images to be read against. In passthrough
+            //                 the background is the visitor's room, so there is
+            //                 nothing to lens and the effect is invisible.
+            //   손바닥 블랙홀  — a second raymarched hole at hand distance, on the
+            //                 scene already sitting at the Quest march budget.
             var phenomena = new (System.Func<string> text, UnityEngine.Events.UnityAction act)[]
             {
-                (() => Loc.T("아인슈타인 링", "Einstein ring", "アインシュタイン環", "爱因斯坦环"), () => controls.ToggleEinstein()),
                 (() => Loc.T("스파게티화", "Spaghettify", "スパゲッティ化", "面条化"), () => controls.ToggleSpaghetti()),
                 (() => Loc.T("제트", "Jets", "ジェット", "喷流"), () => controls.ToggleJets()),
-                (() => Loc.T("렌즈", "Lens", "レンズ", "透镜"), () => controls.ToggleLens()),
-                (() => Loc.T("광도곡선", "Light curve", "光度曲線", "光变曲线"), () => controls.ToggleLightCurve()),
-                (() => Loc.T("수식", "Formulas", "数式", "公式"), ToggleTheory),
             };
 
-            // The other MR exhibits, one hop away — same scene-name pattern
-            // as the desktop F9/F11 keys.
-            var scenes = new (System.Func<string> text, UnityEngine.Events.UnityAction act)[]
+            // One way out, and it is the title. Hopping straight between exhibits
+            // put three destinations in every menu and made the way home the
+            // fourth thing to find; the title screen is the hub now.
+            var exit = new (System.Func<string> text, UnityEngine.Events.UnityAction act)[]
             {
-                (() => Loc.T("은하 전시", "Milky Way", "銀河展示", "银河展区"), () => LoadScene("MilkyWayMR")),
-                (() => Loc.T("태양계 전시", "Solar system", "太陽系展示", "太阳系展区"), () => LoadScene("SolarSystemMR")),
-                (() => Loc.T("성운 전시", "Nebulae", "星雲展示", "星云展区"), () => LoadScene("NebulaMR")),
                 (() => Loc.T("처음으로", "Title", "最初へ", "回标题"), () => LoadScene("MRTitle")),
             };
 
-            BuildRow(canvas.transform, "MR Menu Experiences", experiences, 26f + RowPitch * 3f);
-            BuildRow(canvas.transform, "MR Menu BlackHole", blackHole, 26f + RowPitch * 2f);
+            BuildRow(canvas.transform, "MR Menu Exhibit", exhibit, 26f + RowPitch * 2f);
             BuildRow(canvas.transform, "MR Menu Phenomena", phenomena, 26f + RowPitch);
-            BuildRow(canvas.transform, "MR Menu Scenes", scenes, 26f);
+            BuildRow(canvas.transform, "MR Menu Exit", exit, 26f);
         }
 
         void LoadScene(string scene)
@@ -145,21 +152,6 @@ namespace BlackHoleEffect
             if (tour == null) return;
             if (tour.Running) tour.StopTour();
             else if (!controls.CinematicBusy) tour.StartTour();
-        }
-
-        void ToggleTheory()
-        {
-            if (controls.Theory != null) controls.Theory.Toggle();
-        }
-
-        void BeginMerger()
-        {
-            if (controls.Binary != null && !controls.CinematicBusy) controls.Binary.Begin();
-        }
-
-        void BeginFallIn()
-        {
-            if (controls.fallIn != null && !controls.CinematicBusy) controls.fallIn.Begin();
         }
 
         void BeginIntro()

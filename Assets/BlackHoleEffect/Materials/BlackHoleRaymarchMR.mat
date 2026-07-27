@@ -49,7 +49,7 @@ Material:
     - _ViewExtent: 15
     - _ZWrite: 0
     m_Colors:
-    - _DemoStarDir: {r: 0, g: 0, b: 1, a: 0}
+    - _DemoStarDir: {r: 0.41494495, g: -0.40172324, b: 0.81635714, a: 0}
     - _DiskTint: {r: 1, g: 1, b: 1, a: 1}
     - _Hole1Pos: {r: 1.7482442, g: -0, b: -0.568543, a: 0}
     - _Hole2Pos: {r: -2.185305, g: 0, b: 0.71067876, a: 0}

@@ -23,11 +23,26 @@ namespace BlackHoleEffect
     ///
     /// Nothing here parents to the hole. It is two-hand scalable, and a parented
     /// canvas would scale the text along with it.
+    ///
+    /// And nothing here TRACKS the hole either — <see cref="target"/> is read
+    /// once, for a position, and then let go of. Every MR exhibit is grabbable,
+    /// so a frame that re-read the target every LateUpdate came along for the
+    /// ride: pick the black hole up to look at it from another side and the
+    /// whole menu swings around the room with it, which is both nauseating and
+    /// useless, since the panels you would reach for have moved too. The target
+    /// says where in the room to hang the frame, not what to follow.
+    ///
+    /// The exhibits' Reset buttons deliberately do NOT re-latch: every stage
+    /// resets to the same home pose the frame anchored on, so there is nothing
+    /// to re-read. <see cref="Reanchor"/> exists for the case that is not true —
+    /// a stage that moves its own home, or a scene that re-targets the frame.
     /// </summary>
     [DisallowMultipleComponent]
     public class MRWorldCanvas : MonoBehaviour
     {
-        [Tooltip("Left empty, the hole in the scene is found on first placement.")]
+        [Tooltip("Where in the room to hang the frame. Sampled for its position " +
+                 "when it changes, then not followed — see Reanchor(). Left " +
+                 "empty, the hole in the scene is found on first placement.")]
         public Transform target;
         public Camera viewer;
 
@@ -43,11 +58,11 @@ namespace BlackHoleEffect
                  "tiring direction, and the panels sat at +17 deg.")]
         public float verticalDrop = 0.14f;   // ~5 deg at the 1.6 m viewing distance
 
-        [Tooltip("How much of the horizon the full 1920px width wraps onto. The flat " +
-                 "frame spread the outermost panels to 38 deg of yaw; 70 brings them " +
-                 "to about 26 — inside an easy head turn — and because the radius is " +
-                 "unchanged, the text stays exactly as large as it was.")]
-        public float arcDegrees = 70f;
+        [Tooltip("Comfort budget for the total horizontal sweep, in degrees. NOT a " +
+                 "scale factor — the layout is bent at true arc length, so this only " +
+                 "warns when a row is authored too wide to sit inside an easy head " +
+                 "turn. Narrow the row (fewer buttons) rather than raising this.")]
+        public float arcBudgetDegrees = 70f;
 
         [Tooltip("Degrees per second the arrangement swings to follow the viewer. " +
                  "Snapping it every frame makes the panels feel glued to the face.")]
@@ -59,10 +74,25 @@ namespace BlackHoleEffect
         // and nothing writes back into the values we read from it.
         readonly Dictionary<RectTransform, RectTransform> slots = new();
 
+        // The room position the frame hangs at, and the transform it was taken
+        // from. Keeping the source lets an inspector edit or a scene script
+        // swapping the target still re-latch, without ever tracking it.
+        Transform anchoredTo;
+        Vector3 anchor;
+        bool anchored;
+
         void LateUpdate() => Place(Time.deltaTime * turnSpeed);
 
         /// <summary>Snap into place without easing (first frame).</summary>
         public void PlaceNow() => Place(360f);
+
+        /// <summary>Re-read the target's position — for after something moved it
+        /// on purpose, which is a Reset button and nothing else.</summary>
+        public void Reanchor()
+        {
+            anchored = false;
+            PlaceNow();
+        }
 
         void Place(float maxTurnDegrees)
         {
@@ -75,8 +105,18 @@ namespace BlackHoleEffect
                 if (hole != null) target = hole.transform;
             }
 
-            transform.position = (target != null && !followViewer
-                ? target.position
+            // Latch on the first placement and on any change of target. A
+            // destroyed target leaves the last anchor standing rather than
+            // dropping the frame into the viewer's face.
+            if (target != null && (!anchored || target != anchoredTo))
+            {
+                anchor = target.position;
+                anchoredTo = target;
+                anchored = true;
+            }
+
+            transform.position = (anchored && !followViewer
+                ? anchor
                 : cam.transform.position + cam.transform.forward * fallbackDistance)
                 + Vector3.down * verticalDrop;
 
@@ -146,6 +186,8 @@ namespace BlackHoleEffect
 
             Vector3 basis = new Vector3(eye.x, transform.position.y, eye.z);
 
+            float widest = 0f;
+
             foreach (var kv in slots)
             {
                 var slot = kv.Key;
@@ -154,7 +196,24 @@ namespace BlackHoleEffect
 
                 // The panel's own position in the authored layout. Read, never written.
                 Vector3 local = panel.localPosition;
-                float azimuth = local.x / halfWidthPx * (arcDegrees * 0.5f);
+
+                // Bend, do not squash. The old mapping spread the layout over a
+                // FIXED arc — local.x / halfWidth * arc/2 — which moved every
+                // panel centre onto a chord shorter than the width it was
+                // authored at (70 deg at 1.6 m is a 1.84 m chord for a 2.6 m
+                // layout). Centres closed up by 29% while the panels kept their
+                // size, so adjacent buttons overlapped by a quarter of their
+                // width and long labels sat on top of each other.
+                //
+                // Arc LENGTH is the invariant instead: walking local.x metres
+                // along the cylinder subtends local.x / radius radians, so the
+                // gap between any two panels is exactly the gap they were laid
+                // out with, at every radius. There is no free arc parameter —
+                // the sweep is whatever the authored width and the viewing
+                // distance imply, and arcBudgetDegrees only reports on it.
+                float offsetMeters = local.x * scale;
+                float azimuth = Mathf.Rad2Deg * (offsetMeters / radius);
+                widest = Mathf.Max(widest, Mathf.Abs(azimuth));
 
                 Quaternion facing = transform.rotation * Quaternion.AngleAxis(azimuth, Vector3.up);
                 Vector3 seat = basis + facing * Vector3.forward * radius + Vector3.up * (local.y * scale);
@@ -163,6 +222,19 @@ namespace BlackHoleEffect
                 // lands on the cylinder, square-on to the viewer.
                 slot.SetPositionAndRotation(seat - facing * (local * scale), facing);
             }
+
+            // Once per session, not per frame: the widest panel is a property of
+            // the layout, and a warning that repeats 72 times a second is noise.
+            if (!budgetReported && widest * 2f > arcBudgetDegrees)
+            {
+                budgetReported = true;
+                Debug.LogWarning($"MRWorldCanvas: the layout sweeps {widest * 2f:F0} deg at " +
+                                 $"{radius:F2} m, past the {arcBudgetDegrees:F0} deg comfort budget. " +
+                                 "Drop a button from the widest row — widening the arc is not an " +
+                                 "option any more, it would put the panels back on top of each other.");
+            }
         }
+
+        bool budgetReported;
     }
 }

@@ -78,7 +78,12 @@ namespace MilkyWay
         // The detail exhibit's data strips — one line of hard numbers per
         // body, shown under the stop title. Sources: NASA planetary fact
         // sheets (moon counts as of 2024).
-        static readonly string[] Facts =
+        //
+        // Public alongside NarrationLines because the MR exhibit's tap-a-planet
+        // focus card shows exactly this pair, indexed the same way. Two copies
+        // of nine planets' numbers is two chances to correct only one of them.
+        // Index order is the BodyKeys order: Sun, Mercury … Neptune.
+        public static readonly string[] Facts =
         {
             "지름 지구 109배 · 표면 5,500°C · 태양계 질량의 99.8%",
             "지름 0.38× · 하루 59일 · 1년 88일 · 위성 0 · -173~427°C",
@@ -90,7 +95,7 @@ namespace MilkyWay
             "지름 4.0× · 하루 17.2시간(역) · 1년 84년 · 위성 28 · -195°C",
             "지름 3.9× · 하루 16.1시간 · 1년 165년 · 위성 16 · -201°C",
         };
-        static readonly string[] FactsEn =
+        public static readonly string[] FactsEn =
         {
             "Diameter 109× Earth · surface 5,500°C · 99.8% of the system's mass",
             "Diameter 0.38× · day 59 d · year 88 d · moons 0 · -173 to 427°C",
@@ -102,7 +107,7 @@ namespace MilkyWay
             "Diameter 4.0× · day 17.2 h (retro) · year 84 yr · moons 28 · -195°C",
             "Diameter 3.9× · day 16.1 h · year 165 yr · moons 16 · -201°C",
         };
-        static readonly string[] FactsJa =
+        public static readonly string[] FactsJa =
         {
             "直径 地球の109倍 · 表面 5,500°C · 太陽系質量の99.8%",
             "直径 0.38× · 1日 59日 · 1年 88日 · 衛星 0 · -173~427°C",
@@ -114,7 +119,7 @@ namespace MilkyWay
             "直径 4.0× · 1日 17.2時間(逆) · 1年 84年 · 衛星 28 · -195°C",
             "直径 3.9× · 1日 16.1時間 · 1年 165年 · 衛星 16 · -201°C",
         };
-        static readonly string[] FactsZh =
+        public static readonly string[] FactsZh =
         {
             "直径 地球的109倍 · 表面 5,500°C · 占太阳系质量99.8%",
             "直径 0.38× · 一天 59日 · 一年 88日 · 卫星 0 · -173~427°C",

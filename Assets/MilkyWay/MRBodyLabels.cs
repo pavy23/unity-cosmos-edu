@@ -17,6 +17,7 @@ namespace MilkyWay
         class Entry
         {
             public Transform target;
+            public Transform seat;    // where the text sits; null = straight above the target
             public System.Func<string> text;
             public TextMesh label;
             public LineRenderer leader;
@@ -47,8 +48,24 @@ namespace MilkyWay
             refScale = exhibitRoot != null ? Mathf.Max(exhibitRoot.lossyScale.x, 1e-6f) : 1f;
         }
 
+        /// <summary>
+        /// A label parked away from the thing it names, with a leader line back
+        /// to it — the museum diagram's answer to a subject you cannot write on.
+        ///
+        /// The galaxy is the case: its features sit inside a volumetric disk
+        /// that is emitting light, so a tag floating a centimetre above one is
+        /// printed over the glare and cannot be read at any size. Seat the text
+        /// out past the disk edge against the empty room instead, and let the
+        /// line say which feature it belongs to.
+        /// </summary>
+        public void AddSeated(Transform target, Transform seat, System.Func<string> text)
+        {
+            Add(target, text, 0f, 0f, leaderLine: true, seat: seat);
+        }
+
         public void Add(Transform target, System.Func<string> text,
-            float offsetMul = 2.2f, float offsetAdd = 0.025f, bool leaderLine = false)
+            float offsetMul = 2.2f, float offsetAdd = 0.025f, bool leaderLine = false,
+            Transform seat = null)
         {
             if (target == null) return;
             var go = new GameObject("Label — " + target.name);
@@ -83,7 +100,7 @@ namespace MilkyWay
 
             entries.Add(new Entry
             {
-                target = target, text = text, label = label, leader = leader,
+                target = target, seat = seat, text = text, label = label, leader = leader,
                 offsetMul = offsetMul, offsetAdd = offsetAdd
             });
         }
@@ -119,7 +136,12 @@ namespace MilkyWay
 
                 float radius = e.target.lossyScale.x;
                 Vector3 anchor = e.target.position;
-                Vector3 pos = anchor + Vector3.up * (radius * e.offsetMul + e.offsetAdd * s);
+                // A seat is an absolute placement — the exhibit root carries it,
+                // so grabbing or scaling the miniature moves the label with the
+                // feature it points at, and the leader line stays honest.
+                Vector3 pos = e.seat != null
+                    ? e.seat.position
+                    : anchor + Vector3.up * (radius * e.offsetMul + e.offsetAdd * s);
                 e.label.characterSize = charSize;
                 e.label.transform.position = pos;
                 // Yaw-only billboard: pitching with the head reads as HUD.
@@ -131,8 +153,14 @@ namespace MilkyWay
                 if (e.leader != null)
                 {
                     e.leader.widthMultiplier = 0.0022f * s;
-                    e.leader.SetPosition(0, anchor + Vector3.up * radius * 1.05f);
-                    e.leader.SetPosition(1, pos);
+                    Vector3 from = anchor + Vector3.up * radius * 1.05f;
+                    // Stop a glyph-height short of the text. Run all the way to
+                    // `pos` and the line meets the baseline dead centre, drawing
+                    // a stem up through the middle of the first word.
+                    Vector3 span = pos - from;
+                    float gap = Mathf.Min(charSize * 3f, span.magnitude * 0.25f);
+                    e.leader.SetPosition(0, from);
+                    e.leader.SetPosition(1, pos - span.normalized * gap);
                 }
             }
         }

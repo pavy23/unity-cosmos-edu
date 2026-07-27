@@ -1,3 +1,5 @@
+#if UNITY_EDITOR
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.XR.Interaction.Toolkit.Inputs.Simulation;
@@ -5,24 +7,49 @@ using UnityEngine.XR.Interaction.Toolkit.Inputs.Simulation;
 namespace BlackHoleEffect
 {
     /// <summary>
-    /// The XR Interaction Simulator auto-spawns from a GLOBAL editor setting
-    /// (Assets/XRI/Settings), so it turns up in every scene — including the
-    /// pure-desktop ones (black-hole showcase, Milky Way), where there is no
-    /// XR Origin to aim through and its Update throws a NullReferenceException
-    /// every frame. One rule, owned here and nowhere else: a scene without an
-    /// XROrigin gets no simulator.
+    /// Owns when the XR Interaction Simulator exists, because XRI's own answer
+    /// is "always" and that answer breaks the headset.
     ///
-    /// Effectively editor-only: the settings never instantiate the simulator
-    /// in a player build, so in players this is a single cheap null-check per
-    /// scene load.
+    /// XRI ships a global auto-spawn (Edit > Project Settings > XR Plug-in
+    /// Management > XR Interaction Toolkit). Its loader checks nothing except
+    /// "am I in the editor" before instantiating the prefab, and the prefab's
+    /// SimulatedDeviceLifecycleManager then, in OnEnable:
     ///
-    /// Known limit: the simulator's loader runs once at play start. If a play
-    /// session starts in a desktop scene (simulator destroyed) and then loads
-    /// the MR scene additively, the simulator will not come back — restart
-    /// play mode from the MR scene instead.
+    ///   * removes every real XRHMD from the Input System, and subscribes to
+    ///     onDeviceChange so any HMD that shows up *later* is removed too, and
+    ///   * stops every running XRHandSubsystem.
+    ///
+    /// Over Quest Link the real headset registers around 12 s into play mode —
+    /// straight into that onDeviceChange hook. The symptom is a session that
+    /// looks correctly configured and does not track: the view is presented to
+    /// the headset, the camera never moves, and the world-space UI hangs in
+    /// front of your face.
+    ///
+    /// None of that is repairable after the fact, which is why this used to be
+    /// a cleanup pass and no longer is. OnDisable removes the simulator's own
+    /// devices but never restores the real HMD it deleted, and OnDestroy never
+    /// restarts the hand subsystem it stopped. By the time HmdActive() is true
+    /// — the only honest "a headset is here" signal — the damage is done.
+    ///
+    /// So the auto-spawn is off in XRDeviceSimulatorSettings and the decision
+    /// moves here, where it is made once, before anything is touched, and errs
+    /// toward leaving the runtime alone: the simulator is created only in a
+    /// session that has no headset display at all. A false "no headset" would
+    /// cost a desktop tester their mouse-driven rig for one play session; a
+    /// false "headset" costs nothing.
+    ///
+    /// Editor-only in the strict sense — the whole file compiles out of player
+    /// builds, where the simulator has no business existing anyway.
     /// </summary>
     static class XRSimulatorSceneGuard
     {
+        /// <summary>
+        /// "XR Interaction Simulator.prefab" from the XRI sample of the same
+        /// name. Fixed by the package, so it survives a reimport of the sample;
+        /// <see cref="Prefab"/> falls back to a search if it ever does not.
+        /// </summary>
+        const string PrefabGuid = "58d0a4ac86f2348deb02f3880c71378e";
+
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         static void Init()
         {
@@ -32,23 +59,82 @@ namespace BlackHoleEffect
             go.AddComponent<Runner>();
         }
 
+        static GameObject Prefab()
+        {
+            var path = AssetDatabase.GUIDToAssetPath(PrefabGuid);
+            var prefab = string.IsNullOrEmpty(path)
+                ? null
+                : AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (prefab != null) return prefab;
+
+            // The sample was reimported under a different GUID, or moved. Ask
+            // for the component rather than the name — the name is the sample
+            // author's, the component is the contract.
+            foreach (var guid in AssetDatabase.FindAssets("t:Prefab"))
+            {
+                var candidate = AssetDatabase.LoadAssetAtPath<GameObject>(
+                    AssetDatabase.GUIDToAssetPath(guid));
+                if (candidate != null && candidate.GetComponent<XRInteractionSimulator>() != null)
+                    return candidate;
+            }
+
+            return null;
+        }
+
         class Runner : MonoBehaviour
         {
-            // Start runs after every RuntimeInitializeOnLoadMethod — including
-            // the simulator's own spawner, whose order relative to ours is
-            // undefined. Checking here instead of in Init closes that race.
-            void Start() => Sweep();
+            bool warned;
+
+            // Start runs after every RuntimeInitializeOnLoadMethod, so a scene
+            // that authored its own simulator has it by now.
+            void Start() => Sync();
 
             void OnEnable() => SceneManager.sceneLoaded += OnLoaded;
             void OnDisable() => SceneManager.sceneLoaded -= OnLoaded;
-            void OnLoaded(Scene s, LoadSceneMode m) => Sweep();
+            void OnLoaded(Scene s, LoadSceneMode m) => Sync();
 
-            static void Sweep()
+            // Re-run per scene load, because the second half of the condition
+            // moves: the pure-desktop showcases have no XROrigin for the
+            // simulator to aim through, and its Update throws a
+            // NullReferenceException every frame in one.
+            void Sync()
             {
-                if (Object.FindAnyObjectByType<Unity.XR.CoreUtils.XROrigin>() != null) return;
+                var wanted = !XRRuntime.HmdPresent()
+                             && Object.FindAnyObjectByType<Unity.XR.CoreUtils.XROrigin>() != null;
                 var sim = Object.FindAnyObjectByType<XRInteractionSimulator>();
-                if (sim != null) Object.Destroy(sim.gameObject);
+
+                if (wanted)
+                {
+                    if (sim == null) Spawn();
+                    return;
+                }
+
+                // Nothing legitimate keeps a simulator in this scene, so it goes
+                // whoever made it — a hand-placed one costs exactly as much as
+                // ours. Unlike the headset case this is free either way: it only
+                // ever survives to here in a session with no real device behind
+                // it, or in a scene with no rig for it to drive.
+                if (sim != null) Destroy(sim.gameObject);
+            }
+
+            void Spawn()
+            {
+                var prefab = Prefab();
+                if (prefab == null)
+                {
+                    if (warned) return;
+                    warned = true;
+                    Debug.LogWarning("XR Interaction Simulator prefab not found — desktop play " +
+                                     "has no simulated rig. Import it from Window > Package Manager > " +
+                                     "XR Interaction Toolkit > Samples > XR Interaction Simulator.");
+                    return;
+                }
+
+                var instance = Instantiate(prefab);
+                instance.name = prefab.name;   // strip "(Clone)"
+                DontDestroyOnLoad(instance);
             }
         }
     }
 }
+#endif
