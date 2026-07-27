@@ -263,6 +263,14 @@ Each in-app theory card (X) states whether its topic is computed or stylized.
 - The MR docent's own lines are baked to `Assets/MilkyWay/Audio/NarrationMR/`, deliberately **not**
   under `Resources/`: anything in `Resources` ships with every platform including the web build,
   and these clips are headset-only (`Tools/generate_mr_solar_narration.py`)
+- Narration imports at **22 kHz mono Vorbis**. It is one voice reading a caption; speech energy
+  dies well below 11 kHz, and the web build charges the visitor for every byte before the first
+  frame
+- The shipped CJK font is a **subset**, not the 15.7 MB original. `Tools/subset_font.py` cuts
+  Noto Sans KR down to the ~2,000 characters the project's own sources contain (0.73 MB) and
+  verifies its output. **Re-run it after adding text with new characters** — a glyph missing from
+  a dynamic font renders as nothing at all, with no tofu box to catch in a screenshot. The full
+  font stays in `Assets/BlackHoleEffect/Fonts~/`, which Unity ignores by convention
 - WebGL builds are gzip-compressed; serve with `python Builds/serve_webgl.py` locally
 
 ## Building

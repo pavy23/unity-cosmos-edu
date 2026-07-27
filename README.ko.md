@@ -214,6 +214,13 @@ MR의 읽기 텍스트는 데스크톱의 **1.4배**입니다. 1920px 프레임�
 - MR 도슨트 전용 대사는 `Assets/MilkyWay/Audio/NarrationMR/`에 구워집니다. `Resources/` 밖인 것은
   의도입니다 — `Resources`에 있으면 웹 빌드를 포함한 모든 플랫폼에 실려 나가는데, 이 클립들은
   헤드셋 전용입니다 (`Tools/generate_mr_solar_narration.py`)
+- 나레이션은 **22 kHz 모노 Vorbis**로 임포트됩니다. 한 사람이 자막을 읽는 소리이고 음성 에너지는
+  11 kHz 아래에서 끝납니다. 웹 빌드는 첫 프레임 전에 방문자가 모든 바이트를 지불합니다
+- 번들 CJK 폰트는 원본 15.7 MB가 아니라 **서브셋**입니다. `Tools/subset_font.py`가 프로젝트
+  소스에 실재하는 약 2,000자만 남기고(0.73 MB) 결과를 검증합니다. **새 문자가 들어간 텍스트를
+  추가하면 다시 실행하세요** — 동적 폰트는 글리프가 없으면 두부 상자도 없이 그냥 안 그려져서
+  스크린샷으로 잡히지 않습니다. 원본 폰트는 Unity가 무시하는 `Assets/BlackHoleEffect/Fonts~/`에
+  남아 있습니다
 - WebGL 빌드는 gzip 압축 — 로컬에서는 `python Builds/serve_webgl.py`로 서빙
 
 ## 빌드 방법
