@@ -36,9 +36,11 @@ namespace BlackHoleEffect
         [Tooltip("Frame centre below eye level. Sustained upward gaze is the more " +
                  "tiring direction, so the poster sits slightly low.")]
         public float frameDrop = 0.12f;
-        [Tooltip("Arc the 1920px width wraps onto. 52 keeps the outermost card " +
+        [Tooltip("Comfort budget for the card row's horizontal sweep. The canvas " +
+                 "bends at true arc length and only warns when a row overruns " +
+                 "this, so 52 is the check that the outermost card still sits " +
                  "inside 26 deg of yaw — no head turn to read the row.")]
-        public float arcDegrees = 52f;
+        public float arcBudgetDegrees = 52f;
 
         [Header("Re-summon envelope")]
         [Tooltip("Beyond this the frame is re-placed in front of the visitor.")]
@@ -137,7 +139,7 @@ namespace BlackHoleEffect
             {
                 rig.target = placement;
                 rig.verticalDrop = 0f;      // the drop is already in the placement height
-                rig.arcDegrees = arcDegrees;
+                rig.arcBudgetDegrees = arcBudgetDegrees;
                 rig.PlaceNow();
             }
 
