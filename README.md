@@ -65,9 +65,16 @@ relativistic shifts: Doppler beaming, gravitational redshift, and blackbody radi
   (4); every toggle shows a card explaining what you are looking at
 - **Theory panel** — context-sensitive governing-equation cards (X; auto-shown at the advanced
   difficulty level, C)
-- **MR edition** — room-scale hole you can grab and scale, throwable spectral-type star-balls,
-  binary-merger haptics (the room swaps for open space so the bare holes have stars to lens),
-  palm-summoned mini black hole
+- **MR edition** — a room-scale hole you grab with one hand and scale with two, the guided tour,
+  the birth intro, disk colors, spin, the EHT comparison and the difficulty level, all on a
+  hand-ray button menu. Deliberately *not* ported: the fall-in (forced translation with a
+  stationary head is the textbook sickness trigger, and the real floor stays put), the merger
+  (it swaps the room for a starfield, turning an MR exhibit into a VR one mid-session), the mass
+  cycle (it grows the horizon past the viewer, who is one arm away), the Einstein ring and lens
+  magnifier (both need a bright source *behind* the hole — in passthrough the background is your
+  living room), and the light curve and theory sheet (desktop-density line art). The tour skips
+  its Einstein-ring step here rather than talking for twenty seconds over nothing, and renumbers
+  its footer to what the scene actually offers.
 
 | Category | Keys |
 |---|---|
@@ -96,7 +103,9 @@ genuinely attenuates. Nine narrated experiences:
   black-hole exhibit
 - **MR edition** — the galaxy as a ~1.1 m miniature you can grab, spin and two-hand scale, tipped
   toward the viewer so the spiral face reads; feature name tags, a pulsing gold sun ring, and the
-  guided tour re-pointed with a highlight ring instead of a camera
+  guided tour re-pointed with a highlight ring instead of a camera. Menu: galaxy tour · labels ·
+  ambient spin · reset (it returns to its home pose and scale) · title. The ambient spin pauses
+  while a hand is holding it.
 
 ## 3 · Solar system (`SolarSystemShowcase` / `SolarSystemMR`)
 
@@ -111,9 +120,12 @@ legibility clock (Kepler ratios preserved).
 - **Atmosphere dynamics** — Jupiter's belts shear and the Great Red Spot churns (bounded two-phase
   flow maps over the photo maps), Venus superrotation, ice-giant winds, drifting Earth clouds —
   all speeds derived from real wind data on the exhibit clock
-- **MR edition** — a room-scale orrery (Neptune's orbit ≈ 1.2 m) you can grab and rescale; the
-  true-scale lesson re-authored for a fixed viewer: the rig itself shrinks so Neptune's orbit stays
-  put while the planets vanish into grains
+- **MR edition** — a room-scale orrery (Neptune's orbit ≈ 1.2 m) at chest height, built around
+  **tapping a planet**: aim, pull the trigger, and the orrery fades out while that one body rises
+  to 25 cm across at reading distance, turning on its axis with the same NASA fact strip the
+  desktop tour uses. Menu: planet tour · time speed · labels · title. The rig-shrinking true-scale
+  sequence is gone — it and the focus card fought over the rig's scale, and the tap is the verb
+  this exhibit is built around now.
 
 ## 4 · Nebulae &amp; clusters (`NebulaShowcase` / `NebulaMR`)
 
@@ -132,9 +144,51 @@ the parked view keeps a slow two-axis camera drift, so the volumes parallax agai
   of the real inpainted IC 434 curtain; camera drift parallaxes the two
 - **"The Life of a Star"** — a narrated tour threading the six specimens into one story: cloud →
   cold dust → cluster → planetary nebula → supernova → the survivors, and the cycle
-- **MR edition** — the specimens as a single grabbable miniature (~0.8 m) shown one at a time,
-  the museum label following along, the Horsehead as a shadow box floating in your room, and the
-  same narrated tour driven by hand-ray cards
+- **MR edition** — a vitrine rather than an instrument: the six specimens live under one root
+  (~0.8 m) and are shown one at a time, with the museum label following along and the Horsehead
+  as a shadow box floating in your room. You step through them (◀ previous / next ▶) or hand the
+  room to the "life of a star" tour and let it drive; a dwell timer only fills the gaps, so an
+  unattended case still cycles. Not grabbable — six volumetric specimens have no reason to be
+  carried around, and a grab with no reset strands the case wherever it lands.
+
+## Controls in the headset
+
+There is no keyboard in MR, so every exhibit carries the same three things: a **hand ray** for
+buttons and tap targets, **grab** for whatever the exhibit lets you hold, and a **button menu**
+along the bottom of the world-space frame. The menu calls straight into `DesktopControls` — the
+cycles, the toasts and the four languages live there, so the two editions cannot drift apart.
+
+| Gesture | What it does |
+|---|---|
+| Point + trigger | Press a menu button; tap a planet in the solar orrery; drive the tour cards |
+| Grab (one hand) | Move the black hole, the galaxy miniature, a focused planet |
+| Grab (two hands) | Scale it — the general grab transformer allows two-handed scaling |
+| Poke the docent orb | Pause / resume the line it is speaking |
+
+The frame itself is placed **against your head pose when the scene opens**, not against the scene
+origin: on a Quest the world origin is wherever the room was set up, so a fixed anchor puts the
+menu behind whoever did not start on that exact spot. Once placed it is world-locked — a menu that
+chases the head reads as a helmet HUD — but if it leaves reach (past 3.2 m, closer than 0.9 m, or
+more than 75° off your gaze) for a second and a half, it glides back in front of you.
+
+Reading text is **1.4× its desktop size** in MR. The frame is 1920 px hung 2.6 m wide about 1.6 m
+away, which puts a 20 px line near one degree — fine for Latin, not fine for Korean, where a
+syllable block packs two or three strokes into the space a Latin letter uses and fills in to grey
+texture. Only heights grow: x becomes an angle on the canvas cylinder, and the widest button row
+already spends the 70° comfort budget.
+
+| Scene | Menu |
+|---|---|
+| `MRTitle` | four exhibit cards + the language row; a docent orb greets you and, after 45 s of hesitation, points at the first card |
+| `BlackHoleMR` | guided tour · birth · disk colors · spin · EHT photo · level ⁄ spaghettify · jets ⁄ title |
+| `MilkyWayMR` | galaxy tour · labels · spin · reset ⁄ title |
+| `SolarSystemMR` | planet tour · time speed · labels ⁄ title — plus tap any planet, then **Back** |
+| `NebulaMR` | life-of-a-star tour · ◀ previous · next ▶ ⁄ title |
+
+Six buttons is the widest row that still lands inside the comfort budget at 1.6 m, which is why
+the rows are short and the only way out of every exhibit is the title screen — hopping straight
+between exhibits put three destinations in every menu and made the way home the fourth thing to
+find.
 
 ## The physics actually implemented (black hole)
 
@@ -179,7 +233,8 @@ Being honest about what is *not* rigorous:
 - **Planet atmosphere motion** advects photographs with flow maps at real wind speeds — the pattern
   motion is real-rate, the fluid dynamics are not simulated.
 - Kerr mode shows the prograde equatorial thin disk only; jets are decorative (no Blandford–Znajek).
-- MR star-ball orbits are Newtonian with a room-scale GM.
+- **The MR solar focus card shows every body at the same 25 cm.** It is about what a world looks
+  like; true relative scale is a different lesson, and mixing them teaches neither.
 
 Each in-app theory card (X) states whether its topic is computed or stylized.
 
@@ -205,6 +260,9 @@ Each in-app theory card (X) states whether its topic is computed or stylized.
 - Narration audio ships in `Assets/*/Resources/Narration/` (regenerate with
   [edge-tts](https://github.com/rany2/edge-tts); transcripts live in each script's `NarrationLines`
   arrays — subtitle == voice is the exhibit-wide convention)
+- The MR docent's own lines are baked to `Assets/MilkyWay/Audio/NarrationMR/`, deliberately **not**
+  under `Resources/`: anything in `Resources` ships with every platform including the web build,
+  and these clips are headset-only (`Tools/generate_mr_solar_narration.py`)
 - WebGL builds are gzip-compressed; serve with `python Builds/serve_webgl.py` locally
 
 ## Building
@@ -226,6 +284,11 @@ path per platform.
 | Build WebGL (Site, desktop scenes) | `MilkyWay.WebGLSiteBuild.Build` | `Builds/WebGL/` |
 | Build Android (Quest APK) | `MilkyWay.WebGLSiteBuild.BuildAndroid` | `Builds/Android/CosmosEdu.apk` |
 | Build Windows (full exhibit) | `MilkyWay.WebGLSiteBuild.BuildWindows` | `Builds/Windows/CosmosEdu.exe` |
+
+The scenes themselves are regenerated the same way. `Tools/Cosmos/Rebuild All MR Scenes` runs all
+five MR builders in order (the four exhibits plus `MRTitle`) — the scenes are code, so a change to
+a builder is not real until they are rebuilt, and doing them one menu item at a time is how one
+gets forgotten.
 
 Each one **refuses to build a platform that is not already the active target** — it switches and
 asks you to re-run. Player scripts compile with the defines of whatever target is active, so
@@ -266,6 +329,10 @@ the switch itself queues a domain reload that would strand the build mid-call.
 5. On device the build boots straight into `MRTitle` — the passthrough picker with all four MR
    exhibits, hung in front of wherever the visitor happens to be standing. In-editor, pressing Play
    in any MR scene spawns the **XR Device Simulator** for keyboard/mouse hand-ray testing.
+6. Bringing up Quest Link, where it is genuinely hard to tell whether a headset is driving the
+   scene or a simulator is: `MRDiagnostics` dumps the display subsystems, the registered input
+   devices, what drives the camera and whether it moves — grep the editor log for `[MRDIAG]`. It
+   is scaffolding, not a feature; delete it once the bring-up is settled.
 
 ### Headless, and driving an editor that is already open
 
