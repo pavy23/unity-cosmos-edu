@@ -5,20 +5,20 @@ namespace BlackHoleEffect
 {
     /// <summary>
     /// The MR front door: the desktop title screen's language + experience
-    /// picker, hung in the room as the shared world-space frame. Three cards —
-    /// solar system / Milky Way / black hole — each loading its passthrough
-    /// exhibit, with a slowly turning galaxy miniature floating above the
-    /// frame as the room's only decoration. Every MR scene's menu offers a
-    /// "처음으로" button back here, so a visitor in a headset always has the
-    /// same clean entry point a desktop visitor gets.
+    /// picker, hung in the room as the shared world-space frame. Four cards —
+    /// solar system / Milky Way / nebulae / black hole — each loading its
+    /// passthrough exhibit. Every MR scene's menu offers a "처음으로" button
+    /// back here, so a visitor in a headset always has the same clean entry
+    /// point a desktop visitor gets.
+    ///
+    /// The frame is the whole scene: the room stays the visitor's own. A
+    /// decorative galaxy miniature used to turn above it and was cut — it sold
+    /// a thinner version of an exhibit standing one card away.
     /// </summary>
     public class MRTitleScreen : MonoBehaviour
     {
         [Tooltip("Where the frame hangs in the room (MRWorldCanvas target).")]
         public Transform frameAnchor;
-        [Tooltip("Decorative galaxy miniature, spun slowly about its disk axis.")]
-        public Transform decor;
-        public float decorSpinDegPerSec = 2.5f;
 
         Text title, subtitle, hint;
         readonly (Text label, System.Func<string> text)[] cardTexts = new (Text, System.Func<string>)[8];
@@ -84,8 +84,6 @@ namespace BlackHoleEffect
                 locVersion = Loc.Version;
                 Refresh();
             }
-            if (decor != null)
-                decor.Rotate(0f, decorSpinDegPerSec * Time.deltaTime, 0f, Space.Self);
         }
 
         static void Load(int i) =>

@@ -1,8 +1,6 @@
-using System.Collections;
 using UnityEngine;
-using UnityEngine.UI;
 using UnityEngine.XR.Interaction.Toolkit.Interactables;
-using BlackHoleEffect; // Loc, BlackHoleUI, NarrationManager
+using BlackHoleEffect; // Loc
 
 namespace MilkyWay
 {
@@ -10,11 +8,14 @@ namespace MilkyWay
     /// The MR orrery: the detailed solar system spawned as a room-scale
     /// exhibit piece (Neptune's orbit ≈ 1.2 m), floating at chest height.
     /// Mirrors the desktop <see cref="SolarSystemStage"/> ownership pattern —
-    /// spawn once, keep forever — and adds what MR needs: name tags, a
-    /// camera-facing highlight ring that follows an orbiting body, and the
-    /// scale-truth blend re-authored for a fixed viewer: instead of the
-    /// camera pulling back, the WHOLE RIG shrinks so Neptune's true orbit
-    /// lands exactly where its friendly-map orbit was.
+    /// spawn once, keep forever — and adds what MR needs: name tags and a
+    /// camera-facing highlight ring that follows an orbiting body.
+    ///
+    /// The scale-truth sequence that used to live here — the whole rig
+    /// shrinking by √30.1 so Neptune's true orbit landed on its friendly-map
+    /// one — is gone. Tapping a body for a close-up
+    /// (<see cref="SolarSystemMRFocus"/>) is the interaction this exhibit is
+    /// built around now, and the two fought over the rig's scale.
     /// </summary>
     public class SolarSystemMRStage : MonoBehaviour
     {
@@ -25,28 +26,18 @@ namespace MilkyWay
         public MRBodyLabels labels;
 
         public SolarSystemRig Rig { get; private set; }
-        public bool TruthRunning { get; private set; }
 
-        /// <summary>Fired when the scale-truth sequence finishes or aborts —
-        /// the menu uses it to bring its rows back.</summary>
-        public event System.Action TruthEnded;
-
-        // True-scale mapping: Neptune's true orbit is √30.1 ≈ 5.49× its map
-        // orbit. Shrinking the rig by that factor while realism blends in
-        // keeps Neptune's ring exactly where it was — the planets shrink into
-        // grains around it, which is the whole lesson.
-        const float TruthShrink = 0.18225f;
-
-        static readonly string[] BodyKeys =
+        /// <summary>Sun outward. The index into this IS the index into
+        /// <see cref="SolarSystemTour"/>'s Facts and NarrationLines and into the
+        /// mw_sol_N clips — the focus card reads all three by position, so the
+        /// order is a contract, not a convenience.</summary>
+        public static readonly string[] BodyKeys =
             { "Sun", "Mercury", "Venus", "Earth", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune" };
 
         XRGrabInteractable grab;
         LineRenderer highlight;
         Material ringMat;
         Transform highlightTarget;
-        Coroutine truthRoutine;
-        RectTransform captionPanel;
-        Text caption;
 
         void Awake()
         {
@@ -75,7 +66,7 @@ namespace MilkyWay
             }
         }
 
-        static string BodyName(string key) => key switch
+        public static string BodyName(string key) => key switch
         {
             "Sun"     => Loc.T("태양", "Sun", "太陽", "太阳"),
             "Mercury" => Loc.T("수성", "Mercury", "水星", "水星"),
@@ -156,113 +147,6 @@ namespace MilkyWay
             var c = new Color(0.55f, 1.35f, 1.7f, pulse);
             highlight.startColor = c; highlight.endColor = c;
             highlight.widthMultiplier = 0.006f * Mathf.Max(scaleRatio, 0.2f);
-        }
-
-        // ---------------- scale truth, MR edition --------------------------
-
-        public void ToggleTruth()
-        {
-            if (TruthRunning) AbortTruth();
-            else truthRoutine = StartCoroutine(RunTruth());
-        }
-
-        public void AbortTruth()
-        {
-            if (!TruthRunning) return;
-            if (truthRoutine != null) StopCoroutine(truthRoutine);
-            NarrationManager.Instance.Stop();
-            FinishTruth();
-        }
-
-        void FinishTruth()
-        {
-            if (Rig != null)
-            {
-                Rig.SetRealism(0f);
-                Rig.transform.localScale = Vector3.one * rigScale;
-            }
-            SetLabelsVisible(true);
-            HideCaption();
-            TruthRunning = false;
-            TruthEnded?.Invoke();
-        }
-
-        IEnumerator RunTruth()
-        {
-            TruthRunning = true;
-            SetLabelsVisible(false); // tags would float over vanished grains
-            ClearHighlight();
-            float baseScale = rigScale;
-
-            // Beat 0: confess the friendly map.
-            float len0 = Narrate(0);
-            yield return new WaitForSeconds(Mathf.Max(4f, len0 + 0.4f));
-
-            // Blend out: map → truth. The rig shrinks in step so Neptune's
-            // orbit holds its place in the room while everything inside it
-            // collapses toward the sun-point.
-            float len1 = Narrate(1);
-            const float blend = 10f;
-            for (float t = 0f; t < blend; t += Time.deltaTime)
-            {
-                float u = Mathf.SmoothStep(0f, 1f, t / blend);
-                if (Rig != null)
-                {
-                    Rig.SetRealism(u);
-                    Rig.transform.localScale = Vector3.one * (baseScale * Mathf.Lerp(1f, TruthShrink, u));
-                }
-                yield return null;
-            }
-            if (Rig != null)
-            {
-                Rig.SetRealism(1f);
-                Rig.transform.localScale = Vector3.one * (baseScale * TruthShrink);
-            }
-            yield return new WaitForSeconds(Mathf.Max(4f, len1 - blend + 2f));
-
-            // The emptiness beat, then the blend home.
-            float len2 = Narrate(2);
-            yield return new WaitForSeconds(Mathf.Max(6f, len2 - 4f));
-            for (float t = 0f; t < blend * 0.5f; t += Time.deltaTime)
-            {
-                float u = Mathf.SmoothStep(0f, 1f, t / (blend * 0.5f));
-                if (Rig != null)
-                {
-                    Rig.SetRealism(1f - u);
-                    Rig.transform.localScale = Vector3.one * (baseScale * Mathf.Lerp(TruthShrink, 1f, u));
-                }
-                yield return null;
-            }
-            FinishTruth();
-        }
-
-        float Narrate(int i)
-        {
-            float len = NarrationManager.Instance.Play("ss_scale_" + i);
-            Caption(Loc.T(ScaleTruth.NarrationLines[i], ScaleTruth.NarrationLinesEn[i],
-                          ScaleTruth.NarrationLinesJa[i], ScaleTruth.NarrationLinesZh[i]));
-            return len;
-        }
-
-        void Caption(string text)
-        {
-            if (captionPanel == null)
-            {
-                var canvas = BlackHoleUI.EnsureCanvas(Camera.main);
-                captionPanel = BlackHoleUI.MakePanel(canvas.transform, "Scale Truth Caption (MR)",
-                    new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 26f), new Vector2(1100f, 150f));
-                caption = BlackHoleUI.MakeText(captionPanel, "Text", 21, BlackHoleUI.TextPrimary,
-                    TextAnchor.MiddleLeft, new Vector2(0f, 0f), new Vector2(0f, 0f),
-                    new Vector2(28f, 0f), new Vector2(1044f, 150f));
-                caption.horizontalOverflow = HorizontalWrapMode.Wrap;
-            }
-            captionPanel.gameObject.SetActive(true);
-            caption.text = text;
-        }
-
-        void HideCaption()
-        {
-            if (captionPanel != null) captionPanel.gameObject.SetActive(false);
         }
 
         void OnDestroy()

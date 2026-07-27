@@ -28,8 +28,11 @@ namespace BlackHoleEffect
                 var canvas = BlackHoleUI.EnsureCanvas(Camera.main);
                 panel = BlackHoleUI.MakePanel(canvas.transform, "Explain Card",
                     new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-24f, -30f), new Vector2(470f, 150f));
-                text = BlackHoleUI.MakeText(panel, "Text", 16, BlackHoleUI.TextPrimary, TextAnchor.UpperLeft,
-                    new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(20f, -16f), new Vector2(430f, 120f));
+                // The panel hugs whatever height the text needs (below), so the
+                // MR size bump costs nothing here but a taller card.
+                text = BlackHoleUI.MakeText(panel, "Text", BlackHoleUI.ReadingSize(16), BlackHoleUI.TextPrimary,
+                    TextAnchor.UpperLeft, new Vector2(0f, 1f), new Vector2(0f, 1f),
+                    new Vector2(20f, -16f), new Vector2(430f, BlackHoleUI.ReadingY(120f)));
                 text.horizontalOverflow = HorizontalWrapMode.Wrap;
             }
             if (runner == null)

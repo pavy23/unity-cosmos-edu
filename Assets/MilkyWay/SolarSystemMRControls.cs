@@ -6,13 +6,21 @@ using BlackHoleEffect; // Loc, BlackHoleUI, LanguageSelect
 namespace MilkyWay
 {
     /// <summary>
-    /// Hand-ray menu for the MR solar-system exhibit: tour, scale truth,
-    /// time speed, labels, and hops to the other two MR exhibits.
+    /// Hand-ray menu for the MR solar-system exhibit: tour, time speed, labels,
+    /// and the way back to the title. Also owns the tap-a-planet close-up
+    /// (<see cref="SolarSystemMRFocus"/>), which is the exhibit's main verb —
+    /// the menu is what you use when you are not holding a planet.
     /// </summary>
     public class SolarSystemMRControls : MonoBehaviour
     {
         public SolarSystemMRStage stage;
         public SolarSystemMRTour tour;
+
+        SolarSystemMRFocus focus;
+
+        /// <summary>The tap-a-planet close-up, once Start has built it. The
+        /// tour asks so it can refuse to start over a held planet.</summary>
+        public SolarSystemMRFocus Focus => focus;
 
         readonly List<(Text label, System.Func<string> text)> localized = new();
         readonly List<GameObject> menuRows = new();
@@ -32,7 +40,14 @@ namespace MilkyWay
             LanguageSelect.CreateWidget();
             if (BlackHoleUI.WorldRig != null && stage != null)
                 BlackHoleUI.WorldRig.target = stage.transform;
-            if (stage != null) stage.TruthEnded += () => { SetMenuVisible(true); RefreshLabels(); };
+
+            // Added here, not authored in the scene: the bodies it makes
+            // tappable are built by SolarSystemRig at Awake, so nothing could
+            // have been wired to them ahead of time.
+            focus = gameObject.AddComponent<SolarSystemMRFocus>();
+            focus.stage = stage;
+            focus.controls = this;
+            focus.viewer = GetComponentInChildren<Camera>() ?? Camera.main;
         }
 
         void Update()
@@ -41,6 +56,7 @@ namespace MilkyWay
             locVersion = Loc.Version;
             RefreshLabels();
             if (tour != null) tour.OnLanguageChanged();
+            if (focus != null) focus.RefreshCard();
         }
 
         void RefreshLabels()
@@ -63,43 +79,30 @@ namespace MilkyWay
             {
                 (() => Loc.T("행성 투어", "Planet tour", "惑星ツアー", "行星导览"),
                     () => { if (tour != null) tour.Toggle(); }),
-                (() => Loc.T("진짜 크기", "True scale", "本当の縮尺", "真实比例"),
-                    BeginTruth),
                 (() => Loc.T("시간 ×", "Speed ×", "時間 ×", "时间 ×")
                        + Speeds[speedIndex].ToString("0.##"),
                     CycleSpeed),
                 (() => Loc.T("이름표", "Labels", "名札", "标签"),
-                    () => { if (stage != null && (tour == null || !tour.Running) && !stage.TruthRunning)
+                    () => { if (stage != null && (tour == null || !tour.Running))
                                 stage.SetLabelsVisible(!stage.LabelsVisible); }),
             };
 
-            var scenes = new (System.Func<string> text, UnityEngine.Events.UnityAction act)[]
+            // The title screen is the only hop. Exhibit-to-exhibit buttons put
+            // three destinations in every menu and buried the way home among
+            // them; the hub does that job.
+            var exit = new (System.Func<string> text, UnityEngine.Events.UnityAction act)[]
             {
-                (() => Loc.T("블랙홀 전시", "Black hole", "ブラックホール展示", "黑洞展区"),
-                    () => LoadScene("BlackHoleMR")),
-                (() => Loc.T("은하 전시", "Milky Way", "銀河展示", "银河展区"),
-                    () => LoadScene("MilkyWayMR")),
-                (() => Loc.T("성운 전시", "Nebulae", "星雲展示", "星云展区"),
-                    () => LoadScene("NebulaMR")),
                 (() => Loc.T("처음으로", "Title", "最初へ", "回标题"),
                     () => LoadScene("MRTitle")),
             };
 
             BuildRow(canvas.transform, "Solar MR Menu", actions, 26f + RowPitch);
-            BuildRow(canvas.transform, "Solar MR Scenes", scenes, 26f);
-        }
-
-        void BeginTruth()
-        {
-            if (stage == null || (tour != null && tour.Running)) return;
-            if (stage.TruthRunning) { stage.AbortTruth(); return; }
-            SetMenuVisible(false); // captions land on the strip the menu occupies
-            stage.ToggleTruth();
+            BuildRow(canvas.transform, "Solar MR Exit", exit, 26f);
         }
 
         void CycleSpeed()
         {
-            if (stage == null || (tour != null && tour.Running) || stage.TruthRunning) return;
+            if (stage == null || (tour != null && tour.Running)) return;
             speedIndex = (speedIndex + 1) % Speeds.Length;
             stage.ambientMotionScale = Speeds[speedIndex];
             stage.SetMotionScale(Speeds[speedIndex]);
@@ -109,7 +112,6 @@ namespace MilkyWay
         void LoadScene(string name)
         {
             if (tour != null && tour.Running) tour.StopTour();
-            if (stage != null && stage.TruthRunning) stage.AbortTruth();
             UnityEngine.SceneManagement.SceneManager.LoadScene(name);
         }
 

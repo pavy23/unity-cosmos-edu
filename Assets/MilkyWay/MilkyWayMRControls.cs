@@ -68,20 +68,15 @@ namespace MilkyWay
                     () => { if (stage != null) stage.ResetPose(); }),
             };
 
-            var scenes = new (System.Func<string> text, UnityEngine.Events.UnityAction act)[]
+            // The title screen is the only hop — see SolarSystemMRControls.
+            var exit = new (System.Func<string> text, UnityEngine.Events.UnityAction act)[]
             {
-                (() => Loc.T("블랙홀 전시", "Black hole", "ブラックホール展示", "黑洞展区"),
-                    () => LoadScene("BlackHoleMR")),
-                (() => Loc.T("태양계 전시", "Solar system", "太陽系展示", "太阳系展区"),
-                    () => LoadScene("SolarSystemMR")),
-                (() => Loc.T("성운 전시", "Nebulae", "星雲展示", "星云展区"),
-                    () => LoadScene("NebulaMR")),
                 (() => Loc.T("처음으로", "Title", "最初へ", "回标题"),
                     () => LoadScene("MRTitle")),
             };
 
             BuildRow(canvas.transform, "MW MR Menu", actions, 26f + RowPitch);
-            BuildRow(canvas.transform, "MW MR Scenes", scenes, 26f);
+            BuildRow(canvas.transform, "MW MR Exit", exit, 26f);
         }
 
         void LoadScene(string name)

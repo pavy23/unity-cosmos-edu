@@ -270,8 +270,12 @@ namespace BlackHoleEffect
                 Vector3 labelPos = center + (right * labelDir.x + up * labelDir.y) * rs + bias;
 
                 // Scale text/lines with the hole so labels work from room-scale
-                // MR (Rs ~ 0.1 m) up to the showcase scene (Rs = 0.5 m).
-                e.label.characterSize = 0.09f * rs;
+                // MR (Rs ~ 0.1 m) up to the showcase scene (Rs = 0.5 m). The MR
+                // bump on top is the same one the reading cards get: these lines
+                // carry Korean set beside formulas, and tying their size to a
+                // 12 cm hole leaves the syllable blocks filling in.
+                e.label.characterSize = 0.09f * rs
+                    * (BlackHoleUI.WorldSpace ? BlackHoleUI.MRReadingScale : 1f);
                 e.line.widthMultiplier = 0.03f * rs;
                 e.label.transform.position = labelPos;
                 e.label.transform.rotation = Quaternion.LookRotation(-toCam, up);

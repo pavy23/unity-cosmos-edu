@@ -98,6 +98,11 @@ namespace MilkyWay.Editor
 
             var labelsGO = new GameObject("MR Labels");
             var labels = labelsGO.AddComponent<MRBodyLabels>();
+            // Bigger than the 0.012 default, and bigger than the orrery's tags:
+            // MilkyWayMRStage seats these out past the disk edge now, so they
+            // have empty room to grow into instead of neighbours to collide
+            // with — and they are read against the room, not against the glare.
+            labels.baseCharSize = 0.016f;
 
             var stage = root.AddComponent<MilkyWayMRStage>();
             stage.controller = controller;
@@ -136,8 +141,20 @@ namespace MilkyWay.Editor
             var anchor = new GameObject("Solar System Anchor (MR)");
             anchor.transform.position = new Vector3(0f, 1.1f, 1.5f);
 
+            // The grab handle hangs BELOW the orrery, like the stem of an
+            // orrery on a stand — it must not sit on the sun.
+            //
+            // It used to: a 0.16 m bubble centred on the anchor, which is the
+            // sun's own position. SolarSystemMRFocus makes every body tappable
+            // with a collider of its own, and a hand ray takes the nearest hit,
+            // so that bubble swallowed the two targets inside it — the Sun
+            // (world radius 0.07 m) and Mercury (mapped orbit 0.14 m). Aiming
+            // at either picked the whole exhibit up instead of opening it.
+            // Dropped to y = -0.24, the handle clears the sun's underside and
+            // every mapped orbit lies outside it.
             var sphere = anchor.AddComponent<SphereCollider>();
-            sphere.radius = 0.16f; // grab bubble around the sun
+            sphere.center = new Vector3(0f, -0.24f, 0f);
+            sphere.radius = 0.14f;
             var rb = anchor.AddComponent<Rigidbody>();
             rb.useGravity = false;
             rb.isKinematic = true;
@@ -295,19 +312,11 @@ namespace MilkyWay.Editor
                 stage.specimens.Add(spec);
             }
 
-            // Hand grab: move with one hand, scale with two (the galaxy recipe).
-            var sphere = root.AddComponent<SphereCollider>();
-            sphere.radius = 8f; // local units → ~0.44 m grab bubble
-            var rb = root.AddComponent<Rigidbody>();
-            rb.useGravity = false;
-            rb.isKinematic = true;
-            var grab = root.AddComponent<XRGrabInteractable>();
-            grab.throwOnDetach = false;
-            grab.movementType = XRBaseInteractable.MovementType.Instantaneous;
-            grab.trackRotation = true;
-            grab.trackScale = true;
-            var transformer = root.AddComponent<XRGeneralGrabTransformer>();
-            transformer.allowTwoHandedScaling = true;
+            // No grab on this one, unlike the galaxy and the orrery. The case is
+            // a vitrine the visitor walks around, and NebulaMRStage dropped the
+            // ResetPose that a grab needs to be recoverable — a visitor who
+            // dragged the specimens off into a corner had no way to bring them
+            // back. Stepping through the specimens is the interaction here.
 
             var audio = cam.gameObject.AddComponent<MilkyWayAudio>();
 
@@ -323,22 +332,19 @@ namespace MilkyWay.Editor
             Selection.activeGameObject = root;
         }
 
-        /// <summary>The MR front door: passthrough room, the shared world-space
-        /// frame carrying language + three exhibit cards (MRTitleScreen), and a
-        /// slowly turning galaxy miniature floating above the frame. Every MR
-        /// menu's "처음으로" lands here; the desktop title screen hands off to
-        /// this scene when it boots inside a headset.</summary>
+        /// <summary>The MR front door: passthrough room and the shared
+        /// world-space frame carrying language + the four exhibit cards
+        /// (MRTitleScreen). Every MR menu's "처음으로" lands here; the desktop
+        /// title screen hands off to this scene when it boots inside a headset.
+        ///
+        /// Nothing floats above the frame. A half-metre galaxy miniature used to
+        /// hang there as decoration, but next to the real thing one room away it
+        /// only advertised a cheaper version of the galaxy exhibit — and the
+        /// entrance to a passthrough exhibit reads better as the visitor's own
+        /// room with a poster in it than as a room with one prop in it.</summary>
         [MenuItem("Tools/Cosmos/Create MR Title Scene (Passthrough)")]
         public static void BuildMRTitle()
         {
-            var volumeShader = Shader.Find("MilkyWay/GalaxyVolume");
-            var starShader = Shader.Find("MilkyWay/GalaxyStars");
-            if (!volumeShader || !starShader)
-            {
-                Debug.LogError("Milky Way shaders not compiled yet.");
-                return;
-            }
-
             var scene = NewMRScene("MRTitle");
             var cam = BuildXRRig();
 
@@ -347,42 +353,10 @@ namespace MilkyWay.Editor
             var anchor = new GameObject("Title Frame Anchor");
             anchor.transform.position = new Vector3(0f, 1.5f, 2.0f);
 
-            // Decor: the MR galaxy miniature, floating above the frame and
-            // turning slowly. Same MR materials as the galaxy exhibit, so a
-            // killed play session can never leak desktop values.
-            var volumeMat = SaveMaterial("GalaxyVolumeMR", volumeShader);
-            var starMat = SaveMaterial("GalaxyStarsMR", starShader);
-            starMat.SetFloat("_NearFade", 0.08f * GalaxyScale);
-            starMat.SetFloat("_SizeScale", 2.4f);
-
-            var decor = new GameObject("Galaxy Decor (MR)");
-            decor.transform.position = new Vector3(0f, 2.35f, 2.55f);
-            decor.transform.rotation = Quaternion.Euler(-32f, 0f, 0f);
-            decor.transform.localScale = Vector3.one * 0.016f; // ~0.51 m disk
-
-            var volumeGO = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            volumeGO.name = "Galaxy Volume";
-            volumeGO.transform.SetParent(decor.transform, false);
-            Object.DestroyImmediate(volumeGO.GetComponent<Collider>());
-            var volumeRenderer = volumeGO.GetComponent<MeshRenderer>();
-            volumeRenderer.sharedMaterial = volumeMat;
-            volumeRenderer.shadowCastingMode = ShadowCastingMode.Off;
-
-            var starsGO = new GameObject("Galaxy Stars");
-            starsGO.transform.SetParent(decor.transform, false);
-            starsGO.AddComponent<GalaxyStarField>().material = starMat;
-
-            var controller = decor.AddComponent<MilkyWayController>();
-            controller.volumeMaterial = volumeMat;
-            controller.starMaterial = starMat;
-            controller.volumeRenderer = volumeRenderer;
-            controller.Apply(); // AddComponent already ran OnEnable before wiring — the BH lesson
-
             var audio = cam.gameObject.AddComponent<MilkyWayAudio>();
 
             var screen = cam.gameObject.AddComponent<BlackHoleEffect.MRTitleScreen>();
             screen.frameAnchor = anchor.transform;
-            screen.decor = decor.transform;
 
             SaveAndRegister(scene, "Assets/Scenes/MRTitle.unity");
             Selection.activeGameObject = anchor;

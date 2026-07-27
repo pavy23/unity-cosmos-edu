@@ -44,6 +44,9 @@ namespace MilkyWay
             Running = true;
             step = 0;
             if (controls != null) controls.SetMenuVisible(false); // card owns the strip
+            // The story picks the specimens from here on; the vitrine's own
+            // dwell timer would otherwise swap one out mid-narration.
+            if (stage != null) stage.AutoCycle = false;
             ApplyStep();
         }
 
@@ -55,6 +58,7 @@ namespace MilkyWay
             NarrationManager.Instance.Stop();
             if (card != null) card.gameObject.SetActive(false);
             if (controls != null) controls.SetMenuVisible(true);
+            if (stage != null) stage.AutoCycle = true;
             // The stage stays on the specimen we ended at — free browsing
             // resumes right where the story left the visitor.
         }
@@ -103,18 +107,25 @@ namespace MilkyWay
             if (card != null) return;
             var canvas = BlackHoleUI.EnsureCanvas(Camera.main);
 
+            // Bottom-pivoted so MR's taller reading text grows the card upward,
+            // away from the nav buttons on its bottom edge.
             card = BlackHoleUI.MakePanel(canvas.transform, "Nebula MR Tour Card",
-                new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 26f), new Vector2(1100f, 250f));
+                new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 26f),
+                new Vector2(1100f, BlackHoleUI.ReadingY(250f)));
 
-            cardTitle = BlackHoleUI.MakeText(card, "Title", 28, BlackHoleUI.TitleGold, TextAnchor.UpperLeft,
-                new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(28f, -18f), new Vector2(860f, 36f), FontStyle.Bold);
+            cardTitle = BlackHoleUI.MakeText(card, "Title", BlackHoleUI.ReadingSize(28), BlackHoleUI.TitleGold,
+                TextAnchor.UpperLeft, new Vector2(0f, 1f), new Vector2(0f, 1f),
+                new Vector2(28f, BlackHoleUI.ReadingY(-18f)), new Vector2(860f, BlackHoleUI.ReadingY(36f)),
+                FontStyle.Bold);
 
-            cardBody = BlackHoleUI.MakeText(card, "Body", 21, BlackHoleUI.TextPrimary, TextAnchor.UpperLeft,
-                new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(28f, -62f), new Vector2(1044f, 150f));
+            cardBody = BlackHoleUI.MakeText(card, "Body", BlackHoleUI.ReadingSize(21), BlackHoleUI.TextPrimary,
+                TextAnchor.UpperLeft, new Vector2(0f, 1f), new Vector2(0f, 1f),
+                new Vector2(28f, BlackHoleUI.ReadingY(-62f)), new Vector2(1044f, BlackHoleUI.ReadingY(150f)));
             cardBody.horizontalOverflow = HorizontalWrapMode.Wrap;
 
-            cardFooter = BlackHoleUI.MakeText(card, "Footer", 16, BlackHoleUI.TextSecondary, TextAnchor.LowerLeft,
-                new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(28f, 12f), new Vector2(300f, 24f));
+            cardFooter = BlackHoleUI.MakeText(card, "Footer", BlackHoleUI.ReadingSize(16), BlackHoleUI.TextSecondary,
+                TextAnchor.LowerLeft, new Vector2(0f, 0f), new Vector2(0f, 0f),
+                new Vector2(28f, 12f), new Vector2(300f, BlackHoleUI.ReadingY(24f)));
 
             // Hand-ray transport: ≥3° targets (84 px on the 2.6 m frame).
             prevLabel = BlackHoleUI.MakeButton(card, "Tour Prev", "",

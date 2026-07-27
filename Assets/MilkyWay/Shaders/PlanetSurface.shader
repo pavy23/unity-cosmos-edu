@@ -160,6 +160,7 @@ Shader "MilkyWay/PlanetSurface"
             {
                 float4 positionOS : POSITION;
                 float3 normalOS : NORMAL;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
             struct Varyings
@@ -168,11 +169,14 @@ Shader "MilkyWay/PlanetSurface"
                 float3 positionWS : TEXCOORD0;
                 float3 normalWS : TEXCOORD1;
                 float3 positionOS : TEXCOORD2;
+                UNITY_VERTEX_OUTPUT_STEREO
             };
 
             Varyings vert(Attributes v)
             {
                 Varyings o;
+                UNITY_SETUP_INSTANCE_ID(v);
+                UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
                 o.positionWS = TransformObjectToWorld(v.positionOS.xyz);
                 o.positionHCS = TransformWorldToHClip(o.positionWS);
                 o.normalWS = TransformObjectToWorldNormal(v.normalOS);
@@ -182,6 +186,8 @@ Shader "MilkyWay/PlanetSurface"
 
             half4 frag(Varyings i) : SV_Target
             {
+                UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
+
                 // Texture in OBJECT space so the pattern rides the planet's
                 // spin (the rig rotates the transform); a unit sphere's
                 // object position doubles as its surface normal.

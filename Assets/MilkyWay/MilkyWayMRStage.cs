@@ -44,34 +44,59 @@ namespace MilkyWay
             BuildLabels();
         }
 
+        // Where the labels sit, in galaxy-local kpc. The visible disk ends at
+        // R=16, so a seat at ~21 clears it by a third of a metre at exhibit
+        // scale and every tag is read against the room instead of against the
+        // disk it is naming. Angles are spread around the rim so no two seats
+        // collide from the oblique house view — the Sun keeps +x (it is the one
+        // feature whose direction is the point), and the halo goes high and to
+        // the back, where a spherical envelope honestly is.
+        const float SeatRing = 21f;
+
         void BuildLabels()
         {
             if (labels == null) return;
             labels.Init(transform);
-            // Spread the tags: from the exhibit's oblique view every label
-            // near the axis stacks over the bulge glare, so only Sgr A* may
-            // claim the centre — everything else lives out on the disk.
-            AddLabel(new Vector3(0f, 2.2f, 0f),
+
+            // Sgr A* is the exception: straight up the disk normal, not out to
+            // the rim. A leader from dead centre to the edge would draw a line
+            // across the whole face of the galaxy.
+            AddLabel(Vector3.zero, new Vector3(0f, 7.5f, 0f),
                 () => Loc.T("궁수자리 A*\n(은하 중심 블랙홀)", "Sagittarius A*\n(central black hole)",
                             "いて座A*\n(銀河中心ブラックホール)", "人马座A*\n(银河中心黑洞)"));
-            AddLabel(SunLocal + new Vector3(0f, 1.1f, 0f),
+            AddLabel(SunLocal, Seat(0f, 2.5f),
                 () => Loc.T("태양 — 우리는 여기", "The Sun — we are here",
                             "太陽 — 私たちはここ", "太阳——我们在这里"));
-            AddLabel(new Vector3(3.4f, 0.5f, 1.7f),
+            AddLabel(new Vector3(3.4f, 0.5f, 1.7f), Seat(27f, 2.5f),
                 () => Loc.T("막대", "The bar", "棒", "棒"));
-            AddLabel(new Vector3(-10f, 0.5f, 4f),
+            AddLabel(new Vector3(-10f, 0.5f, 4f), Seat(158f, 2.5f),
                 () => Loc.T("나선팔", "Spiral arm", "渦状腕", "旋臂"));
-            AddLabel(new Vector3(11f, 4.5f, -3f),
+            AddLabel(new Vector3(-4f, 9f, -10f), new Vector3(-6f, 13.5f, -15f),
                 () => Loc.T("헤일로", "Halo", "ハロー", "银晕"));
         }
 
-        void AddLabel(Vector3 local, System.Func<string> text)
+        static Vector3 Seat(float degrees, float height)
+        {
+            float a = degrees * Mathf.Deg2Rad;
+            return new Vector3(Mathf.Cos(a) * SeatRing, height, Mathf.Sin(a) * SeatRing);
+        }
+
+        /// <summary>Anchor the leader line on the feature, park the text on the
+        /// seat. Both ride the galaxy, so spinning or scaling the miniature
+        /// carries the whole annotation along.</summary>
+        void AddLabel(Vector3 feature, Vector3 seat, System.Func<string> text)
         {
             var anchor = new GameObject("Anchor — label").transform;
             anchor.SetParent(transform, false);
-            anchor.localPosition = local;
+            anchor.localPosition = feature;
             anchor.localScale = Vector3.zero; // radius term contributes nothing
-            labels.Add(anchor, text, 0f, 0.01f);
+
+            var seatT = new GameObject("Seat — label").transform;
+            seatT.SetParent(transform, false);
+            seatT.localPosition = seat;
+            seatT.localScale = Vector3.zero;
+
+            labels.AddSeated(anchor, seatT, text);
         }
 
         public bool Held => grab != null && grab.isSelected;

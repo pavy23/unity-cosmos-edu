@@ -66,21 +66,12 @@ namespace BlackHoleEffect
             // MR title before any UI is built. The editor's XR simulator never
             // trips this: it simulates input devices, not a display, and the
             // scene guard removes it from non-XR scenes anyway.
-            if (HmdActive() && Application.CanStreamedLevelBeLoaded("MRTitle"))
+            if (XRRuntime.HmdActive() && Application.CanStreamedLevelBeLoaded("MRTitle"))
             {
                 UnityEngine.SceneManagement.SceneManager.LoadScene("MRTitle");
                 return;
             }
             Build();
-        }
-
-        static bool HmdActive()
-        {
-            var displays = new System.Collections.Generic.List<UnityEngine.XR.XRDisplaySubsystem>();
-            SubsystemManager.GetSubsystems(displays);
-            foreach (var d in displays)
-                if (d.running) return true;
-            return false;
         }
 
         void Update()

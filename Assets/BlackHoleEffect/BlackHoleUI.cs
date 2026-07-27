@@ -60,6 +60,40 @@ namespace BlackHoleEffect
         public static float WorldWidthMeters = 2.6f;
 
         /// <summary>
+        /// How much bigger reading text is in MR than at a desk.
+        ///
+        /// The frame is 1920 px hung 2.6 m wide about 1.6 m away, so an authored
+        /// pixel is 1.35 mm and a 20 px body line subtends about one degree.
+        /// That is fine for Latin and not fine for the language this exhibit is
+        /// written in: a Korean syllable block packs two or three strokes into
+        /// the space a Latin letter uses, and at one degree they fill in and the
+        /// text turns to grey texture. 1.4x puts a line near 1.4 deg, which is
+        /// where the blocks come apart again.
+        ///
+        /// This is NOT WorldWidthMeters. Widening the frame would scale the text
+        /// and the layout together, and the layout is the half that cannot move:
+        /// x becomes an angle on MRWorldCanvas's cylinder and the widest button
+        /// row already spends the 70 deg comfort budget. Height is free — y is
+        /// not bent — so reading text grows downward into space nothing is
+        /// competing for. Use <see cref="ReadingSize"/> for the font and
+        /// <see cref="ReadingY"/> for every vertical measurement that stacks
+        /// with it: card heights, row heights, and the offsets between them.
+        /// Widths and x offsets stay authored.
+        /// </summary>
+        public const float MRReadingScale = 1.4f;
+
+        /// <summary>Font size for reading text — enlarged in MR, authored size
+        /// on desktop.</summary>
+        public static int ReadingSize(int desktopSize) =>
+            WorldSpace ? Mathf.RoundToInt(desktopSize * MRReadingScale) : desktopSize;
+
+        /// <summary>A vertical measurement belonging to reading text — a card
+        /// height, a text rect height, or the offset that stacks the next row
+        /// below it. Grows with the font so the rows never close up.</summary>
+        public static float ReadingY(float desktopY) =>
+            WorldSpace ? desktopY * MRReadingScale : desktopY;
+
+        /// <summary>
         /// The MR frame's rig — null on desktop, or before any UI is built.
         ///
         /// Ask here rather than FindAnyObjectByType: the canvas is DontSave so it
